@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.next/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets
+.env
+*.key
+*.pem
+credentials.json
+service-account*.json
+
+# GCP
+.gcloudignore
+
+# Logs
+*.log
