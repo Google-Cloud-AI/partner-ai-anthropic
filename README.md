@@ -17,7 +17,7 @@
 
 ## About
 
-This repository is a curated collection of co-innovation work spanning **Claude on Google Cloud**, covering Vertex AI integrations, agentic AI patterns with ADK, MCP, A2A, Claude Code workflows, and deployment of Claude-powered agents to the **Gemini Enterprise Agent Platform (GEAP)**.
+This repository is a curated collection of co-innovation work spanning **Claude on Google Cloud**, covering Gemini Enterprise Agent Platform integrations, agentic AI patterns with ADK, MCP, A2A, Claude Code workflows, and deployment of Claude-powered agents to the **Gemini Enterprise Agent Platform (GEAP)**.
 
 It is organized as a **progressive learning path** — from environment setup to production-oriented solution accelerators.
 
