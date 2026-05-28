@@ -69,9 +69,7 @@ This project is licensed under the Apache License 2.0 — see [LICENSE](./LICENS
 
 ## Maintainer
 
-**Schneider Larbi**
-Senior Manager, Global Partner Technical Architecture (AI & SaaS ISVs)
-Google Cloud
+**Partner Technical Architecture Team**
 
 ---
 
