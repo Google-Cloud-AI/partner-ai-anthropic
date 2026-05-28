@@ -73,6 +73,6 @@ This project is licensed under the Apache License 2.0 — see [LICENSE](./LICENS
 
 ---
 
-*This repository is a personal/team co-innovation effort and is not an official product of Anthropic or Google Cloud.*
+*This repository is a team co-innovation effort and is not an official product of Anthropic or Google Cloud.*
 
 Onward. 🚀
