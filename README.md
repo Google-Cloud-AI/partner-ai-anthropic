@@ -1,17 +1,19 @@
 # Anthropic × Google Cloud Co-Innovation
 
-> **⚠️ DISCLAIMER — USE AT YOUR OWN RISK**
->
-> This repository is provided **"AS IS"**, without warranty of any kind, express or implied. The code, configurations, architectures, and guidance contained herein are shared for **educational and demonstration purposes only**.
->
-> - This is **NOT** an officially supported Anthropic or Google Cloud product.
-> - Content represents **individual contributor work** and does not necessarily reflect the views, positions, or roadmap of Anthropic, Google Cloud, or any affiliated organization.
-> - Running these workloads on Google Cloud **will incur costs** — you are solely responsible for any charges, quota consumption, or resource usage on your own GCP projects.
-> - Examples may use **preview, experimental, or rapidly changing APIs** that can break without notice.
-> - **Do not deploy any code from this repository directly to production** without your own review, testing, hardening, and security validation.
-> - **Authors and contributors accept no liability** for any damages, data loss, security incidents, or costs arising from the use of this material.
->
-> By using this repository, you acknowledge and accept these terms.
+---
+
+### ⚠️ DISCLAIMER — USE AT YOUR OWN RISK
+
+This repository is provided **"AS IS"**, without warranty of any kind, express or implied. The code, configurations, architectures, and guidance contained herein are shared for **educational and demonstration purposes only**.
+
+- This is **NOT** an officially supported Anthropic or Google Cloud product.
+- Content represents **individual contributor work** and does not necessarily reflect the views, positions, or roadmap of Anthropic, Google Cloud, or any affiliated organization.
+- Running these workloads on Google Cloud **will incur costs** — you are solely responsible for any charges, quota consumption, or resource usage on your own GCP projects.
+- Examples may use **preview, experimental, or rapidly changing APIs** that can break without notice.
+- **Do not deploy any code from this repository directly to production** without your own review, testing, hardening, and security validation.
+- **Authors and contributors accept no liability** for any damages, data loss, security incidents, or costs arising from the use of this material.
+
+By using this repository, you acknowledge and accept these terms.
 
 ---
 
