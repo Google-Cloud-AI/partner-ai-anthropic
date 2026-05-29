@@ -1,0 +1,19 @@
+{
+  "sessions": [
+    {
+      "name": "projects/436293010210/locations/global/collections/default_collection/engines/pta-co-innovation-team_1774556044286/sessions/18059318142071363408",
+      "state": "IN_PROGRESS",
+      "turns": [
+        {
+          "query": {
+            "queryId": "6983156945547419662",
+            "text": "Use the Claude Code agent to write the string 'hello-from-cuj-test' to /workspace/cuj-test.txt and confirm."
+          },
+          "queryConfig": {
+            "google.discoveryengine.googleapis.com.Assistant.tools_spec": "{}",
+            "google.discoveryengine.googleapis.com.Assistant.answer_generation_mode": "ANSWER_GENERATION_MODE_UNSPECIFIED",
+            "google.discoveryengine.googleapis.com.Assistant.model_id": ""
+          }
+        }
+      ],
+      "sta

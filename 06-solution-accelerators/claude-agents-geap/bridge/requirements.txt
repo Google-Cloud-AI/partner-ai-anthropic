@@ -1,0 +1,33 @@
+# cc-a2a-bridge runtime deps. Loose pins for v1; tighten before external demo.
+
+# FastAPI stack (same as backend for consistency).
+fastapi
+uvicorn[standard]
+
+# A2A protocol SDK. Probe A confirmed 0.2.13 matches the a2a-protocol skill;
+# 0.2.14 was yanked upstream ("gRPC requirements handled incorrectly").
+a2a-sdk==0.2.13
+
+# Kubernetes API client — SandboxClaim CRUD against agents.x-k8s.io CRDs.
+# Pinned 2026-05-21: kubernetes-36 (released ~May 2026) introduced
+# aiohttp-based async client and broke GKE control-plane auth,
+# producing 401 on every SandboxClaim CRUD operation. The
+# phase12-r3 outage of 2026-05-20 was caused by pip resolving
+# to 36 when this was unpinned. Re-test before bumping.
+kubernetes==35.0.0
+
+# Google auth + identity verification.
+# Pinned 2026-05-21: precautionary, paired with the kubernetes pin
+# because google-auth produces the token kubernetes uses; we want
+# both sides of the auth interaction stable. 2.52.0 was the version
+# in the working phase8-r1 build.
+google-auth==2.52.0
+google-auth-httplib2
+
+# HTTP client for: (a) backend /execute SSE streaming via the in-cluster
+# router, (b) oauth2.googleapis.com/tokeninfo lookups.
+httpx
+
+# Phase 8 — bridge mints v4 signed URLs at /workspace/sign for files
+# the backend can't inline (>5 MB).
+google-cloud-storage

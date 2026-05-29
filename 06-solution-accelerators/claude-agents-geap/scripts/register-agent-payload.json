@@ -1,0 +1,20 @@
+{
+  "displayName": "Claude Code",
+  "description": "Build scripts, dashboards, and prototypes from plain English. Reads files, runs commands, writes code in an isolated workspace, returns the result as a downloadable file artifact.",
+  "a2aAgentDefinition": {
+    "jsonAgentCard": "{\"capabilities\": {\"pushNotifications\": false, \"stateTransitionHistory\": false, \"streaming\": true}, \"defaultInputModes\": [\"text/plain\", \"application/octet-stream\"], \"defaultOutputModes\": [\"text/plain\", \"text/html\", \"application/octet-stream\"], \"description\": \"Build scripts, dashboards, and prototypes from plain English. Reads files, runs commands, writes code in an isolated workspace, and returns the result as a downloadable file artifact.\", \"name\": \"Claude Code\", \"protocolVersion\": \"0.2\", \"skills\": [{\"description\": \"Describe a script, dashboard, prototype, or analysis in plain English. The agent reads any files you attach, runs commands in an isolated workspace, and returns the finished output as a file artifact.\", \"examples\": [\"Build an interactive HTML dashboard from this billing CSV.\", \"Find the bottom-quartile headlines in this ad CSV and write 50 new variants under 30 characters.\", \"Turn this PRD into a clickable HTML prototype.\"], \"id\": \"code-from-english\", \"name\": \"Build software from plain English\", \"tags\": [\"coding\", \"data-analysis\", \"prototyping\"]}], \"url\": \"https://cc-a2a-bridge-qrr3gkz3tq-uc.a.run.app\", \"version\": \"0.1.0\"}"
+  },
+  "starterPrompts": [
+    {
+      "text": "Build me an interactive HTML dashboard from a CSV I paste."
+    },
+    {
+      "text": "Turn this PRD into a clickable HTML prototype."
+    },
+    {
+      "text": "Find the bottom-quartile headlines in this ad CSV and write 50 new variants under 30 characters."
+    }
+  ],
+  "customPlaceholderText": "Describe the script, dashboard, or prototype you want\u2026",
+  "languageCode": "en"
+}

@@ -1,0 +1,47 @@
+# Phase 3 — pinned for reproducibility.
+#
+# Each package is installed in its own Dockerfile RUN layer to bound
+# resolver memory per the Phase 3 Lesson learned (google-adk + litellm
+# in a single resolver exceed 16 GiB; see PROJECT_PLAN.md). This file
+# is the manifest / source of truth; the Dockerfile installs them one
+# by one so cache works per-package.
+#
+# TODO Phase 4+: pin playwright explicitly; add hashes via pip-tools.
+
+# Browser automation (Phase 2)
+playwright
+
+# Vertex Claude inference SDK (Phase 3)
+anthropic[vertex]==0.102.0
+
+# Claude Code CLI driver (Phase 3)
+claude-agent-sdk==0.1.81
+
+# Agent orchestration (Phase 3)
+google-adk==1.33.0
+litellm==1.84.0
+
+# Async HTTP server (Phase 4 — replaces stdlib HTTPServer for concurrency
+# under gVisor; see PROJECT_PLAN.md "Phase 3 Lesson 3"). Loose pins for
+# the initial migration; will tighten to exact versions in a follow-up
+# once we've observed which combo works in the image build.
+fastapi
+uvicorn[standard]
+
+# Firestore Python client (Phase 4 — backend code uses
+# firestore.AsyncClient(database="cc-on-ge")).
+google-cloud-firestore
+
+# GCS client (Phase 6 — workspace park/restore via downscoped tokens).
+# The pod NEVER uses its own SA against the bucket; storage.Client is
+# always built from a per-turn OAuth2 token in X-Workspace-Token.
+google-cloud-storage
+
+# HTTP client (Phase 8 — backend's get_download_url tool calls the
+# bridge's /workspace/sign endpoint for signed-URL fallback).
+httpx
+
+# Phase 10 — magic-byte MIME sniffing fallback when extension is
+# missing or wrong. Used in artifact_tool.sniff_mime; gracefully
+# falls back to application/octet-stream if libmagic isn't present.
+python-magic
