@@ -84,7 +84,7 @@ deployment learnings — is in the engineering reference under [`docs/`](./docs/
 | [`bridge/`](./bridge/) | Cloud Run A2A adapter: `main.py`, token resolution (`auth.py`), STS downscoping (`downscope.py`), signed-URL helpers (`sign_helpers.py`), sandbox claim lifecycle, tests |
 | [`infra/`](./infra/) | Terraform IaC (`terraform/`) and `cloudbuild.yaml` for both images |
 | [`scripts/`](./scripts/) | Smoke tests, isolation negative test, agent registration, deployment helpers |
-| [`docs/`](./docs/) | Engineering reference design document (`.docx`) and its `python-docx` build script |
+| [`docs/`](./docs/) | Engineering reference design document ([`engineering-reference.md`](./docs/engineering-reference.md)) |
 | [`PROJECT_PLAN.md`](./PROJECT_PLAN.md) | Milestones, v1 scope, and the full Critical User Journey catalogue |
 
 ## Prerequisites
@@ -176,8 +176,8 @@ latency.
 ## Engineering Reference
 
 The full engineering design document — executive summary, component deep-dives, the request
-lifecycle, deployment, and best-practices / deployment learnings — is included as a Word
-document under [`docs/`](./docs/), regenerable with the included `python-docx` build script.
+lifecycle, deployment, and best-practices / deployment learnings — is in
+[`docs/engineering-reference.md`](./docs/engineering-reference.md).
 
 ## References
 
