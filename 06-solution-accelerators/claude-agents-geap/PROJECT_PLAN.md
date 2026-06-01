@@ -824,7 +824,7 @@ was needed; the issue is workstation-venv-only.
 ### Phase 5 — gcloud pip mirror hides PyPI packages (2026-05-14)
 
 The workstation's pip was preconfigured against
-`us-python.pkg.dev/artifact-foundry-prod/...` (an internal Google
+`us-python.pkg.dev/<your-artifact-registry-project>/...` (an internal Google
 mirror). Pip flatly reported "No matching distribution found for
 a2a-sdk" even though `https://pypi.org/simple/a2a-sdk/` returned a
 valid listing.
