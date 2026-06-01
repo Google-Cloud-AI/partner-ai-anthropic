@@ -11,3 +11,5 @@ Set up everything you need to run Claude on Google Cloud: project and IAM config
 | [`multi-region-endpoints/`](./multi-region-endpoints/) | Configure Claude multi-region endpoints for availability and quota |
 
 **Recommended order:** `vertex-ai-setup` → `claude-code-setup` → `multi-region-endpoints`.
+
+**Next:** once you're set up, work through the [`claude-on-agent-platform`](../02-tutorials/claude-on-agent-platform/) tutorial series — begin with **module 00 (setup & logging)**.
