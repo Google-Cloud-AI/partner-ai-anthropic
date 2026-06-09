@@ -1,33 +1,29 @@
-# How to contribute
+# Contributor Covenant Code of Conduct
 
-We'd love to accept your patches and contributions to this project.
+## Our Pledge
 
-## Before you begin
+We as members, contributors, and leaders pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
-### Sign our Contributor License Agreement
+We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
-Contributions to this project must be accompanied by a
-[Contributor License Agreement](https://cla.developers.google.com/about) (CLA).
-You (or your employer) retain the copyright to your contribution; this simply
-gives us permission to use and redistribute your contributions as part of the
-project.
+## Our Standards
 
-If you or your current employer have already signed the Google CLA (even if it
-was for a different project), you probably don't need to do it again.
+Examples of behavior that contributes to a positive environment include demonstrating empathy and kindness, being respectful of differing opinions, giving and gracefully accepting constructive feedback, accepting responsibility and apologizing to those affected by our mistakes, and focusing on what is best for the overall community.
 
-Visit <https://cla.developers.google.com/> to see your current agreements or to
-sign a new one.
+Unacceptable behavior includes the use of sexualized language or imagery, trolling, insulting or derogatory comments, public or private harassment, publishing others' private information without explicit permission, and other conduct which could reasonably be considered inappropriate in a professional setting.
 
-### Review our community guidelines
+## Enforcement Responsibilities
 
-This project follows
-[Google's Open Source Community Guidelines](https://opensource.google/conduct/).
+Community leaders are responsible for clarifying and enforcing standards of acceptable behavior and will take appropriate and fair corrective action in response to any behavior they deem inappropriate, threatening, offensive, or harmful.
 
-## Contribution process
+## Scope
 
-### Code reviews
+This Code of Conduct applies within all community spaces and also applies when an individual is officially representing the community in public spaces.
 
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
-[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
-information on using pull requests.
+## Enforcement
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **slarbi@google.com**. All complaints will be reviewed and investigated promptly and fairly.
+
+## Attribution
+
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1.

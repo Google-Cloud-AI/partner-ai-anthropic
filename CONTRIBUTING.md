@@ -1,30 +1,33 @@
-# Contributing
+# How to contribute
 
-Thanks for your interest in contributing. This document explains how to propose changes.
+We'd love to accept your patches and contributions to this project.
 
-## Filing Issues
+## Before you begin
 
-- Search existing issues before opening a new one.
-- Use the provided issue templates (bug report / feature request).
-- For anything security-related, **do not open a public issue** — see [SECURITY.md](./SECURITY.md).
+### Sign our Contributor License Agreement
 
-## Branch Naming
+Contributions to this project must be accompanied by a
+[Contributor License Agreement](https://cla.developers.google.com/about) (CLA).
+You (or your employer) retain the copyright to your contribution; this simply
+gives us permission to use and redistribute your contributions as part of the
+project.
 
-- `feature/<short-description>` — new content or capabilities
-- `fix/<short-description>` — corrections and bug fixes
-- `docs/<short-description>` — documentation-only changes
+If you or your current employer have already signed the Google CLA (even if it
+was for a different project), you probably don't need to do it again.
 
-## Pull Request Process
+Visit <https://cla.developers.google.com/> to see your current agreements or to
+sign a new one.
 
-1. Fork the repository and create a branch from `main`.
-2. Make your changes, keeping commits focused.
-3. Open a pull request with a clear description and notes on how you tested.
-4. Address review feedback; a maintainer will merge once approved.
+### Review our community guidelines
 
-## Commit Messages
+This project follows
+[Google's Open Source Community Guidelines](https://opensource.google/conduct/).
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/): e.g. `feat:`, `fix:`, `docs:`, `chore:`.
+## Contribution process
 
-## Licensing
+### Code reviews
 
-By submitting a contribution, you agree that it is licensed under the Apache License 2.0, consistent with this repository.
+All submissions, including submissions by project members, require review. We
+use GitHub pull requests for this purpose. Consult
+[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
+information on using pull requests.
