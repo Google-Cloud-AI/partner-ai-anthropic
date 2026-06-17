@@ -19,7 +19,7 @@ expose them as Claude tool definitions, and drive the tool-call loop — by hand
 
 ## Prerequisites
 
-- Completed [tool-use-with-claude](../tool-use-with-claude/).
+- Completed [claude-on-agent-platform module 04 (function calling / tool use)](../claude-on-agent-platform/04-function-calling.ipynb).
 - A Google Cloud project with billing enabled, and the `gcloud` CLI (written for
   Cloud Shell).
 - The BigQuery API and Vertex AI API available in the project.
