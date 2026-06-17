@@ -6,7 +6,7 @@
 Give Claude the ability to call tools. Covers declaring tool schemas, interpreting tool-use requests, executing them, and returning results so Claude can complete the loop.
 
 ## Prerequisites
-- Completed [claude-on-vertex-basics](../claude-on-vertex-basics/)
+- Completed [claude-on-agent-platform module 00 (setup & first call)](../claude-on-agent-platform/00-setup-and-logging.ipynb)
 - Familiarity with JSON schema
 
 ## What You'll Learn / What This Demonstrates

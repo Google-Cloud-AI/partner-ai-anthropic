@@ -6,7 +6,7 @@
 Build and run a minimal Google Agent Development Kit (ADK) agent backed by Claude, locally. A starting point for agentic patterns before deploying to managed runtimes.
 
 ## Prerequisites
-- Completed [claude-on-vertex-basics](../../02-tutorials/claude-on-vertex-basics/)
+- Completed [claude-on-agent-platform module 00 (setup & first call)](../../02-tutorials/claude-on-agent-platform/00-setup-and-logging.ipynb)
 - Python 3.11+ and the ADK installed
 
 ## What You'll Learn / What This Demonstrates
