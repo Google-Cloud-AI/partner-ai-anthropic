@@ -1,4 +1,4 @@
-# Anthropic × Google Cloud Co-Innovation
+# Anthropic on Google Cloud
 
 ---
 
