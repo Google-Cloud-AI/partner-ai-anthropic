@@ -1,9 +1,0 @@
-{
-  "error": {
-    "code": 400,
-    "message": "Engine \"projects/436293010210/locations/global/collections/default_collection/engines/pta-co-innovation-team_1774556044286\" must be associated with a data store for ConversationalSearchService.",
-    "status": "FAILED_PRECONDITION",
-    "details": [
-      {
-        "@type": "type.googleapis.com/google.rpc.DebugInfo",
-        "detail": "[ORIGINAL ERROR] generic::failed_precondition: Engine \"projects/436293010210/locations/global/collections/default_collection/engines/pta-co-innovation-team_1774556044286\" must be associated with a data store for ConversationalSearchService. [google.rpc.error_details_ext] { message: \"Engine \\\"projects/436293010210/locations/global/collections/default_collection/engines/pta-co-innovation-team_1774556044286

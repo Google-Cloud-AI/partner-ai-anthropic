@@ -14,19 +14,14 @@ This project is intended for demonstration and educational purposes only — it 
 
 This repository is a curated collection of co-innovation work spanning **Claude on Google Cloud**, covering Gemini Enterprise Agent Platform integrations, agentic AI patterns with ADK, MCP, A2A, Claude Code workflows, and deployment of Claude-powered agents to the **Gemini Enterprise Agent Platform (GEAP)**.
 
-It is organized as a **progressive learning path** — from environment setup to production-oriented solution accelerators.
+It starts with a minimal two-section structure — quickstarts and demos — and will grow as needed.
 
 ## Repository Structure
 
 | Section | Description |
 |---|---|
-| [`01-getting-started/`](./01-getting-started/) | Environment setup: Vertex AI, Claude Code, multi-region endpoints |
-| [`02-tutorials/`](./02-tutorials/) | Step-by-step learning modules on core Claude + Google Cloud patterns |
-| [`03-quick-starts/`](./03-quick-starts/) | Minimal runnable examples to get up and running fast |
-| [`04-demos/`](./04-demos/) | End-to-end demonstration applications |
-| [`05-best-practices/`](./05-best-practices/) | Prompt engineering, cost optimization, VPC-SC, and security guidance |
-| [`06-solution-accelerators/`](./06-solution-accelerators/) | Production-oriented blueprints for common enterprise patterns |
-| [`07-reference-architectures/`](./07-reference-architectures/) | Diagrams and architectural decision records |
+| [`01-quickstart/`](./01-quickstart/) | Minimal, runnable quickstarts to get up and running fast |
+| [`02-demos/`](./02-demos/) | End-to-end demonstration applications |
 
 ## Getting Started
 
@@ -35,8 +30,8 @@ It is organized as a **progressive learning path** — from environment setup to
    git clone https://github.com/PTA-Co-innovation-Team/partner-ai-anthropic.git
    cd partner-ai-anthropic
    ```
-2. Start with [`01-getting-started/`](./01-getting-started/) to configure your environment.
-3. Follow the numbered learning path, or jump to a specific demo in [`04-demos/`](./04-demos/).
+2. Start with [`01-quickstart/`](./01-quickstart/) to get up and running.
+3. Explore end-to-end examples in [`02-demos/`](./02-demos/).
 
 ## Prerequisites
 
