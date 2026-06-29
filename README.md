@@ -12,7 +12,7 @@ This project is intended for demonstration and educational purposes only — it 
 
 ## About
 
-This repository is a curated collection of co-innovation work spanning **Claude on Google Cloud**, covering Gemini Enterprise Agent Platform integrations, agentic AI patterns with ADK, MCP, A2A, Claude Code workflows, and deployment of Claude-powered agents to the **Gemini Enterprise Agent Platform (GEAP)**.
+This repository is a curated collection of integration work spanning **Claude on Google Cloud**, covering Agent Platform integrations, agentic AI patterns with ADK, MCP, A2A, Claude Code workflows, and deployment of Claude-powered agents to **Google's Agent Platform **.
 
 It starts with a minimal two-section structure — quickstarts and demos — and will grow as needed.
 
