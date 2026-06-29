@@ -43,8 +43,8 @@ It starts with a minimal two-section structure — quickstarts and demos — and
 ## Technology Stack
 
 - **Models:** Claude (via Anthropic API and Vertex AI), Gemini
-- **Agent frameworks:** Google ADK, A2A, MCP, Vertex AI Agent Engine, Gemini Enterprise Agent Platform (GEAP)
-- **Infrastructure:** GKE, Cloud Run, Vertex AI, BigQuery, AlloyDB
+- **Agent frameworks:** Google ADK, A2A, MCP, Agent Run time, Agent Platform
+- **Infrastructure:** GKE, Cloud Run, Google Cloud Agent Platform, BigQuery, AlloyDB
 - **Tooling:** Claude Code, gcloud, Terraform (where applicable)
 
 ## Contributing
