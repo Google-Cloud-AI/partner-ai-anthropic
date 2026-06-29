@@ -22,7 +22,7 @@ This Code of Conduct applies within all community spaces and also applies when a
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **slarbi@google.com**. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **pta-co-innovation-grp@google.com**. All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 
