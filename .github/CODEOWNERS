@@ -1,0 +1,7 @@
+# Code owners for partner-ai-anthropic.
+#
+# A review from at least one listed owner is required before changes can be
+# merged into a protected branch (see branch protection on `main`). Listed
+# owners need Write access or higher on the repository.
+
+*  @slarbi-web  @roy-ant  @inardini
