@@ -1,0 +1,76 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# ===========================================================================
+# TWO LEVELS OF SUBSTITUTION HAPPEN HERE. Read before editing.
+#
+#   ${NAME}   Filled in at deploy time by Terraform's templatefile() (or by
+#             envsubst in the gcloud path). Non-secret values only, so the
+#             rendered file is safe to store as a Secret Manager version.
+#
+#   $${NAME}  Escaped: survives templating as a literal ${NAME} and is expanded
+#             by the gateway itself from its environment at boot. Every secret
+#             uses this form, so no secret is ever written into this file.
+#
+# Keeping public_url in the second group matters: correcting the URL after the
+# first deploy becomes an env-var update on the Cloud Run service instead of a
+# new secret version.
+# ===========================================================================
+
+listen:
+  host: 0.0.0.0
+  port: 8080
+
+  # The gateway builds its IdP redirect_uri and discovery document from this
+  # value alone — never from X-Forwarded-Host or X-Forwarded-Proto — so it must
+  # exactly match the OAuth client's authorized redirect URI, and the service
+  # must be redeployed when it changes.
+  public_url: $${GATEWAY_PUBLIC_URL}
+
+  # Source ranges of whatever fronts the gateway. X-Forwarded-For is honored
+  # only when the TCP peer is in this list; the gateway then walks the chain
+  # past trusted hops so per-IP sign-in rate limits and audit events record the
+  # developer's IP rather than the front end's.
+  trusted_proxies: ${TRUSTED_PROXIES}
+
+oidc:
+  issuer: https://accounts.google.com
+  client_id: ${OAUTH_CLIENT_ID}
+  client_secret: $${OIDC_CLIENT_SECRET}
+
+  # This is the gateway's entire access-control list: id_tokens from outside
+  # these domains are rejected.
+  allowed_email_domains: [${ALLOWED_DOMAIN}]
+
+  # Google ignores offline_access; these are what actually yield refresh tokens.
+  scopes: [openid, profile, email]
+  extra_auth_params: { access_type: offline, prompt: consent }
+
+  # Harmless with Google; needed by IdPs whose id_token omits email or groups.
+  userinfo_fallback: true
+
+session:
+  jwt_secret: $${GATEWAY_JWT_SECRET}
+
+store:
+  postgres_url: $${GATEWAY_POSTGRES_URL}
+
+upstreams:
+  - provider: vertex
+    region: ${REGION}
+    project_id: ${PROJECT_ID}
+    # Empty auth block: credentials come from the runtime service account via
+    # Application Default Credentials. Resolved on the first request, not at
+    # boot, so a clean startup does not prove the inference path works.
+    auth: {}

@@ -1,0 +1,18 @@
+# Scoped to this module.
+#
+# Everything here stays LF, including on Windows checkouts. The repository has
+# no root .gitattributes, so without this the client's core.autocrlf decides.
+* text=auto eol=lf
+
+# The shell scripts and Dockerfile MUST stay LF even when cloned on Windows: a
+# CRLF shebang fails with "bad interpreter: /bin/bash^M", and CRLF in the
+# Dockerfile breaks the distroless build.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.template  text eol=lf
+*.tf        text eol=lf
+*.hcl       text eol=lf
+
+# Gitignored, but mark it binary in case it is ever force-added, so git never
+# attempts line-ending conversion on a 260 MB executable.
+templates/claude binary

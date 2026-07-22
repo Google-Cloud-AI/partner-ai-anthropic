@@ -22,6 +22,7 @@ It starts with a minimal two-section structure — quickstarts and demos — and
 |---|---|
 | [`01-quickstart/`](./01-quickstart/) | Minimal, runnable quickstarts to get up and running fast |
 | [`02-demos/`](./02-demos/) | End-to-end demonstration applications |
+| [`03-deployment/`](./03-deployment/) | Infrastructure automation for Claude platform components on Google Cloud |
 
 ## Getting Started
 
@@ -32,6 +33,7 @@ It starts with a minimal two-section structure — quickstarts and demos — and
    ```
 2. Start with [`01-quickstart/`](./01-quickstart/) to get up and running.
 3. Explore end-to-end examples in [`02-demos/`](./02-demos/).
+4. Provision self-hosted components from [`03-deployment/`](./03-deployment/).
 
 ## Prerequisites
 
