@@ -1,0 +1,89 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Google-built OpenTelemetry Collector config for Claude Code telemetry.
+# Deployed to Cloud Run; supplied to the container via a Secret Manager volume
+# mount at /etc/otelcol-google/config.yaml (see deploy.sh).
+#
+# Cloud Run routes external HTTPS (443) to the container port, which we set to
+# 4318 (--port=4318), so the OTLP/HTTP receiver below listens on 4318.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Guard against OOM under bursty load (Cloud Run default 512Mi).
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 65
+    spike_limit_percentage: 20
+  # Detect GCP resource (project, region, instance) from the Cloud Run metadata
+  # server so exported telemetry is correctly attributed.
+  resourcedetection:
+    detectors: [gcp]
+    timeout: 10s
+  # Promote the per-user identity (set at the source via OTEL_RESOURCE_ATTRIBUTES,
+  # e.g. user.email=someone@example.com) from a resource attribute onto each
+  # record, so it becomes a queryable label: log label / metric label "user_email".
+  # Needed because under Vertex auth Claude Code emits only a hashed user.id.
+  transform:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(attributes["user_email"], resource.attributes["user.email"])
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["user_email"], resource.attributes["user.email"])
+  batch:
+    send_batch_size: 200
+    send_batch_max_size: 400
+    timeout: 5s
+
+exporters:
+  # Logs (Claude Code events) -> Cloud Logging, traces -> Cloud Trace.
+  # `project` is intentionally omitted: on Cloud Run the exporter auto-detects it
+  # from the runtime SA's credentials (ADC) + resourcedetection, so this config
+  # needs no per-deployment edit.
+  googlecloud:
+    log:
+      default_log_name: claude-code
+  # Metrics -> Cloud Monitoring via Google Managed Service for Prometheus.
+  googlemanagedprometheus: {}
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, transform, batch]
+      exporters: [googlecloud]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, transform, batch]
+      exporters: [googlemanagedprometheus]
+    # Claude Code does not currently emit OTel spans; this pipeline is wired up
+    # and idle, ready if span export is ever added.
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [googlecloud]

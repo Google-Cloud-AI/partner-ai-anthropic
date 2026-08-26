@@ -1,0 +1,200 @@
+{
+  "displayName": "Claude Code · Developer Productivity",
+  "mosaicLayout": {
+    "columns": 12,
+    "tiles": [
+      {
+        "xPos": 0, "yPos": 0, "width": 3, "height": 3,
+        "widget": {
+          "title": "Commits (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase(claude_code_commit_count_total[30d]))"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 3, "yPos": 0, "width": 3, "height": 3,
+        "widget": {
+          "title": "Pull requests (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase(claude_code_pull_request_count_total[30d]))"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 6, "yPos": 0, "width": 3, "height": 3,
+        "widget": {
+          "title": "Sessions (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase(claude_code_session_count_total[30d]))"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 9, "yPos": 0, "width": 3, "height": 3,
+        "widget": {
+          "title": "Active coding hours (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase(claude_code_active_time_seconds_total[30d])) / 3600"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 0, "yPos": 3, "width": 3, "height": 3,
+        "widget": {
+          "title": "Lines added (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase(claude_code_lines_of_code_count_total{type=\"added\"}[30d]))"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 3, "yPos": 3, "width": 3, "height": 3,
+        "widget": {
+          "title": "Lines removed (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase(claude_code_lines_of_code_count_total{type=\"removed\"}[30d]))"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 6, "yPos": 3, "width": 3, "height": 3,
+        "widget": {
+          "title": "Edit-tool accept rate % (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "100 * sum(increase(claude_code_code_edit_tool_decision_total{decision=\"accept\"}[30d])) / sum(increase(claude_code_code_edit_tool_decision_total[30d]))"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 9, "yPos": 3, "width": 3, "height": 3,
+        "widget": {
+          "title": "Tokens in millions (30d)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "prometheusQuery": "sum(increase(claude_code_token_usage_tokens_total[30d])) / 1e6"
+            }
+          }
+        }
+      },
+      {
+        "xPos": 0, "yPos": 6, "width": 6, "height": 4,
+        "widget": {
+          "title": "Commits per day (by user)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (user_email)(increase(claude_code_commit_count_total[1d]))"
+                },
+                "plotType": "LINE"
+              }
+            ],
+            "yAxis": { "label": "commits/day", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "xPos": 6, "yPos": 6, "width": 6, "height": 4,
+        "widget": {
+          "title": "Lines of code per day (added vs removed)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (type)(increase(claude_code_lines_of_code_count_total[1d]))"
+                },
+                "plotType": "LINE"
+              }
+            ],
+            "yAxis": { "label": "lines/day", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "xPos": 0, "yPos": 10, "width": 6, "height": 4,
+        "widget": {
+          "title": "Token usage rate (by model)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (model)(rate(claude_code_token_usage_tokens_total[1h]))"
+                },
+                "plotType": "LINE"
+              }
+            ],
+            "yAxis": { "label": "tokens/sec", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "xPos": 6, "yPos": 10, "width": 6, "height": 4,
+        "widget": {
+          "title": "Sessions per day",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum(increase(claude_code_session_count_total[1d]))"
+                },
+                "plotType": "LINE",
+                "legendTemplate": "sessions"
+              }
+            ],
+            "yAxis": { "label": "sessions/day", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "xPos": 0, "yPos": 14, "width": 6, "height": 4,
+        "widget": {
+          "title": "Active coding hours per day",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum(increase(claude_code_active_time_seconds_total[1d])) / 3600"
+                },
+                "plotType": "LINE",
+                "legendTemplate": "hours"
+              }
+            ],
+            "yAxis": { "label": "hours/day", "scale": "LINEAR" }
+          }
+        }
+      },
+      {
+        "xPos": 6, "yPos": 14, "width": 6, "height": 4,
+        "widget": {
+          "title": "Edit-tool decisions per day (by decision)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (decision)(increase(claude_code_code_edit_tool_decision_total[1d]))"
+                },
+                "plotType": "STACKED_BAR"
+              }
+            ],
+            "yAxis": { "label": "decisions/day", "scale": "LINEAR" }
+          }
+        }
+      }
+    ]
+  }
+}
