@@ -39,7 +39,11 @@ processors:
   # Promote the per-user identity (set at the source via OTEL_RESOURCE_ATTRIBUTES,
   # e.g. user.email=someone@example.com) from a resource attribute onto each
   # record, so it becomes a queryable label: log label / metric label "user_email".
-  # Needed because under Vertex auth Claude Code emits only a hashed user.id.
+  # Needed because under Vertex auth Claude Code emits only an anonymous user.id
+  # (a random identifier persisted in ~/.claude.json), never user.email.
+  # Belt-and-braces: Claude Code also attaches OTEL_RESOURCE_ATTRIBUTES keys
+  # directly as datapoint/log attributes by default, but this keeps the label
+  # consistent if that behaviour is disabled.
   transform:
     error_mode: ignore
     metric_statements:
@@ -81,8 +85,10 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, resourcedetection, transform, batch]
       exporters: [googlemanagedprometheus]
-    # Claude Code does not currently emit OTel spans; this pipeline is wired up
-    # and idle, ready if span export is ever added.
+    # Claude Code span export is a beta and is off by default; developers opt in
+    # per machine with CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1 and
+    # OTEL_TRACES_EXPORTER=otlp. This pipeline is wired and needs no change when
+    # they do (the runtime SA already holds roles/cloudtrace.agent).
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resourcedetection, batch]

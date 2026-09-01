@@ -15,8 +15,9 @@ Cloud Run "claude-otel-collector"   ← Google-built OTel Collector (public imag
 Cloud Logging · Cloud Monitoring (Managed Prometheus) · Cloud Trace
 ```
 
-- **Signals:** logs (Claude Code events) + metrics; traces pipeline wired but idle
-  (Claude Code does not emit spans today).
+- **Signals:** logs (Claude Code events) + metrics; the traces pipeline is wired
+  and ready — span export is a Claude Code beta, off by default, opted into per
+  developer (see [Traces (beta)](#traces-beta)).
 - **Auth:** Cloud Run requires IAM (`--no-allow-unauthenticated`). No key files —
   tokens are minted either from the GCP metadata server (on GCP compute) or via
   `gcloud` service-account impersonation (on laptops). See [Authentication](#authentication).
@@ -82,14 +83,29 @@ in Google Workspace — no repo change, no redeploy. Only if you used an explici
 
 ## Developer setup (each laptop)
 
+> **What you need from the admin first.** `.collector-url` and `config.env` are
+> both gitignored, so a fresh clone does **not** contain them, and the scripts
+> exit early without them:
+>
+> | Script | Requires | Why |
+> |---|---|---|
+> | `print-settings.sh` | `.collector-url` | the endpoint it writes into `settings.json` |
+> | `otel-headers-helper.sh` | `.collector-url` **and** `config.env` | the token audience, plus `PROJECT` / `INVOKER_SA_NAME` to impersonate |
+>
+> Ask your admin for the service URL and either have them share their
+> `config.env`, or run `./setup.sh` and enter the same `PROJECT` and
+> `INVOKER_SA_NAME` they used. To create `.collector-url` by hand:
+> ```bash
+> echo "https://claude-otel-collector-XXXX.<region>.run.app" > .collector-url
+> ```
+
 1. **Install the Google Cloud SDK** and log in as yourself:
    ```bash
    gcloud auth login
    ```
 
-2. **Update `~/.claude/settings.json`** (ask your admin for the endpoint if you
-   don't have `.collector-url`). Easiest — let the script merge it in for you
-   (needs `jq`; backs up the file first):
+2. **Update `~/.claude/settings.json`.** Easiest — let the script merge it in for
+   you (needs `jq`; backs up the file first):
    ```bash
    ./print-settings.sh you@yourcompany.com --merge
    ```
@@ -170,9 +186,11 @@ Metrics: Cloud Monitoring → Metrics Explorer → `prometheus/claude_code_*`
 Troubleshooting the probe: `401/403` ⇒ IAM (invoker binding / token-creator
 grant / token audience); `404` ⇒ wrong path or container port.
 
-## Per-user identity (email instead of a hash)
+## Per-user identity (email instead of an anonymous ID)
 
-Under Vertex auth, Claude Code emits only a hashed `user.id` — no `user.email`.
+Under Vertex auth, Claude Code emits only an anonymous `user.id` — a random
+identifier generated on first run and persisted in `~/.claude.json`, not derived
+from any account — and no `user.email`.
 To attribute telemetry to a real person, each developer sets their email as a
 resource attribute (see the developer setup above):
 
@@ -188,6 +206,24 @@ The SQL queries group by it, falling back to `user.id` for older telemetry.
 > **Note:** `user_email` is **self-declared** — the collector trusts whatever the
 > developer sets. It's fine for cost attribution but is not a verified identity.
 > (GCP's own audit logs still record the real authenticated principal.)
+
+## Traces (beta)
+
+The collector already has a traces pipeline and the runtime SA already holds
+`roles/cloudtrace.agent`, so **no server-side change is needed** — spans land in
+Cloud Trace as soon as a developer opts in.
+
+Span export is a Claude Code **beta** and is off by default. To turn it on, add
+to the `env` block in `~/.claude/settings.json` and restart Claude Code:
+
+```json
+"CLAUDE_CODE_ENHANCED_TELEMETRY_BETA": "1",
+"OTEL_TRACES_EXPORTER": "otlp"
+```
+
+Traces reuse the OTLP endpoint, protocol and auth header already configured for
+logs and metrics. Being a beta, the span schema may change — treat it as
+opt-in per developer rather than a fleet-wide default.
 
 ## Cost accuracy (important)
 
