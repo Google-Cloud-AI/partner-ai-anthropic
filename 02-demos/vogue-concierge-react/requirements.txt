@@ -1,0 +1,45 @@
+# Vogue Concierge — Python dependencies
+# Pinned for compatibility with google-adk + Agent Runtime.
+
+# === Core ADK + Agent Platform ===
+# >=2.4 for the built-in Claude model: thinking-block round-trip inside a
+# tool-use turn, and `effort` via AnthropicGenerateContentConfig.
+google-adk>=2.4
+# >=1.151 is where `agentplatform.rag` landed — the module rag_retrieval.py and
+# setup_rag.py import. 1.150.0 raises ImportError on it.
+google-cloud-aiplatform>=1.151
+
+# === Claude on Agent Platform ===
+# The [vertex] extra adds the google-auth integration so AnthropicVertex can
+# authenticate with Google Application Default Credentials (no API key needed).
+# >=0.78 matches the floor google-adk itself declares, and is the first release
+# with the current-generation model support this demo needs (`effort`, and the
+# thinking-block round-trip inside a tool-use turn). Anything older resolves but
+# fails at the first tool call.
+anthropic[vertex]>=0.78
+
+# === Server (FastAPI app + A2A bridge) ===
+fastapi>=0.115.0
+uvicorn>=0.30.0
+httpx>=0.27.0
+
+# === Image generation (scripts/setup_catalog.py) ===
+# Pulled in by google-adk too, but setup_catalog.py imports it directly, so it
+# is declared here rather than relied on transitively.
+google-genai>=1.0.0
+
+# === Google Cloud data services ===
+google-cloud-bigquery>=3.25.0
+google-cloud-storage>=2.18.0
+
+# === MCP Toolbox (BigQuery tools for the Inventory Specialist) ===
+# toolbox-adk is the ADK integration: it exposes the Toolbox's SQL tools as ADK
+# tools and mints the ID token needed to call the service on Cloud Run.
+toolbox-adk>=1.3.0
+
+# === Agent Runtime deployment deps ===
+pydantic>=2.0.0
+cloudpickle>=3.0.0
+
+# === Utilities ===
+python-dotenv>=1.0.0

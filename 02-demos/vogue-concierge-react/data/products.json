@@ -1,0 +1,930 @@
+[
+  {
+    "sku": "SKU-001",
+    "name": "Tuscan Sunset Midi Dress",
+    "price": 289.0,
+    "category": "Dresses",
+    "description": "A flowing midi dress in warm terracotta tones with a flattering wrap silhouette. Lightweight crepe fabric drapes beautifully, perfect for outdoor celebrations and warm-weather events.",
+    "material": "Crepe",
+    "color": "Terracotta",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "wedding guest",
+      "garden party",
+      "date night",
+      "vacation"
+    ],
+    "tags": [
+      "midi",
+      "wrap",
+      "flowy",
+      "summer",
+      "warm tones"
+    ],
+    "image_prompt": "Elegant terracotta midi wrap dress on a mannequin, warm sunset lighting, luxury boutique setting, crepe fabric draping, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_001.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-002",
+    "name": "Midnight Velvet Blazer",
+    "price": 425.0,
+    "category": "Outerwear",
+    "description": "A structured blazer in deep midnight blue velvet with satin lapels. Single-breasted with gold-tone buttons. A statement piece that elevates any outfit from day to evening.",
+    "material": "Velvet",
+    "color": "Midnight Blue",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "business dinner",
+      "cocktail party",
+      "evening event",
+      "theater"
+    ],
+    "tags": [
+      "blazer",
+      "velvet",
+      "structured",
+      "evening",
+      "statement"
+    ],
+    "image_prompt": "Midnight blue velvet blazer with satin lapels on mannequin, dramatic studio lighting, luxury fashion, gold buttons visible, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_002.png",
+    "audience": "men"
+  },
+  {
+    "sku": "SKU-003",
+    "name": "Pearl Drop Silk Blouse",
+    "price": 195.0,
+    "category": "Tops",
+    "description": "An airy silk blouse in ivory white with delicate pearl button details along the cuffs. Relaxed fit with a subtle sheen that catches the light. Tucks beautifully into trousers or skirts.",
+    "material": "Silk",
+    "color": "Ivory",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "office",
+      "brunch",
+      "business casual",
+      "date night"
+    ],
+    "tags": [
+      "silk",
+      "blouse",
+      "elegant",
+      "versatile",
+      "pearl buttons"
+    ],
+    "image_prompt": "Ivory silk blouse with pearl buttons on mannequin, soft natural lighting, luxury boutique, delicate fabric sheen, minimalist editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_003.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-004",
+    "name": "Coastal Breeze Linen Trousers",
+    "price": 175.0,
+    "category": "Bottoms",
+    "description": "Relaxed wide-leg linen trousers in soft sand beige. Elastic waist with a rope belt detail. The epitome of effortless summer elegance.",
+    "material": "Linen",
+    "color": "Sand Beige",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "resort",
+      "brunch",
+      "casual",
+      "travel"
+    ],
+    "tags": [
+      "linen",
+      "wide-leg",
+      "relaxed",
+      "summer",
+      "coastal"
+    ],
+    "image_prompt": "Sand beige wide-leg linen trousers on mannequin, bright natural light, coastal boutique setting, relaxed luxury, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_004.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-005",
+    "name": "Golden Hour Wrap Dress",
+    "price": 345.0,
+    "category": "Dresses",
+    "description": "A show-stopping wrap dress in champagne gold with subtle metallic threads woven through the fabric. V-neckline, long sleeves, and a midi length that moves gracefully.",
+    "material": "Metallic Blend",
+    "color": "Champagne Gold",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "gala",
+      "wedding guest",
+      "anniversary",
+      "cocktail party"
+    ],
+    "tags": [
+      "wrap dress",
+      "metallic",
+      "evening",
+      "glamorous",
+      "gold"
+    ],
+    "image_prompt": "Champagne gold metallic wrap dress on mannequin, warm golden lighting, luxury evening wear, subtle shimmer, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_005.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-006",
+    "name": "Noir Leather Crossbody Bag",
+    "price": 380.0,
+    "category": "Bags",
+    "description": "A sleek crossbody bag in buttery soft black leather with brushed gold hardware. Adjustable chain strap, multiple compartments, and a magnetic flap closure. Day-to-night versatility.",
+    "material": "Leather",
+    "color": "Black",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "everyday",
+      "evening",
+      "travel",
+      "work"
+    ],
+    "tags": [
+      "crossbody",
+      "leather",
+      "black",
+      "gold hardware",
+      "versatile"
+    ],
+    "image_prompt": "Black leather crossbody bag with gold hardware on marble surface, studio lighting, luxury accessories, clean editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_006.png",
+    "audience": "unisex"
+  },
+  {
+    "sku": "SKU-007",
+    "name": "Alpine Cashmere Sweater",
+    "price": 310.0,
+    "category": "Knitwear",
+    "description": "A sumptuous crewneck sweater in cloud-soft cashmere. Relaxed oversized fit in heathered grey with ribbed cuffs and hem. The ultimate cozy luxury piece.",
+    "material": "Cashmere",
+    "color": "Heathered Grey",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "weekend",
+      "travel",
+      "work from home",
+      "casual"
+    ],
+    "tags": [
+      "cashmere",
+      "crewneck",
+      "oversized",
+      "cozy",
+      "luxury"
+    ],
+    "image_prompt": "Heathered grey cashmere crewneck sweater folded on wood surface, soft natural light, luxury knitwear, cozy texture visible, editorial lifestyle photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_007.png",
+    "audience": "unisex"
+  },
+  {
+    "sku": "SKU-008",
+    "name": "Riviera Stripe Maxi Skirt",
+    "price": 215.0,
+    "category": "Bottoms",
+    "description": "A breezy maxi skirt with navy and white nautical stripes. High-waisted with a flowing A-line silhouette and side pockets. Brings effortless Mediterranean charm to any look.",
+    "material": "Cotton Blend",
+    "color": "Navy/White Stripe",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "resort",
+      "brunch",
+      "vacation",
+      "casual"
+    ],
+    "tags": [
+      "maxi",
+      "striped",
+      "nautical",
+      "summer",
+      "A-line"
+    ],
+    "image_prompt": "Navy and white striped maxi skirt on mannequin, bright Mediterranean-inspired lighting, nautical theme, flowing fabric, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_008.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-009",
+    "name": "Obsidian Statement Earrings",
+    "price": 145.0,
+    "category": "Jewelry",
+    "description": "Bold geometric drop earrings featuring polished obsidian stones set in brushed gold. Lightweight despite their dramatic silhouette. A modern art-meets-fashion statement.",
+    "material": "Obsidian/Gold",
+    "color": "Black/Gold",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "evening",
+      "cocktail",
+      "gallery opening",
+      "date night"
+    ],
+    "tags": [
+      "earrings",
+      "statement",
+      "geometric",
+      "gold",
+      "obsidian"
+    ],
+    "image_prompt": "Geometric obsidian and gold drop earrings on dark velvet display, dramatic side lighting, luxury jewelry photography, modern design",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_009.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-010",
+    "name": "Sahara Suede Ankle Boots",
+    "price": 395.0,
+    "category": "Shoes",
+    "description": "Sleek pointed-toe ankle boots in warm camel suede with a comfortable block heel. Subtle stitching detail and an inner zip closure. From boardroom to bar, endlessly versatile.",
+    "material": "Suede",
+    "color": "Camel",
+    "sizes": [
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11"
+    ],
+    "occasions": [
+      "work",
+      "casual",
+      "date night",
+      "fall/winter"
+    ],
+    "tags": [
+      "ankle boots",
+      "suede",
+      "block heel",
+      "pointed toe",
+      "versatile"
+    ],
+    "image_prompt": "Camel suede pointed-toe ankle boots on stone surface, warm studio lighting, luxury footwear, block heel detail visible, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_010.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-011",
+    "name": "Blossom Print Kimono Jacket",
+    "price": 265.0,
+    "category": "Outerwear",
+    "description": "A lightweight kimono-style jacket with an oversized cherry blossom print on soft blush fabric. Wide sleeves, open front with an optional tie belt. A wearable work of art.",
+    "material": "Viscose",
+    "color": "Blush Pink",
+    "sizes": [
+      "S/M",
+      "L/XL"
+    ],
+    "occasions": [
+      "casual",
+      "resort",
+      "brunch",
+      "layering"
+    ],
+    "tags": [
+      "kimono",
+      "floral",
+      "print",
+      "layering",
+      "Japanese-inspired"
+    ],
+    "image_prompt": "Blush pink kimono jacket with cherry blossom print on mannequin, soft diffused lighting, Japanese-inspired fashion, flowing fabric, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_011.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-012",
+    "name": "Sterling Chain Link Necklace",
+    "price": 225.0,
+    "category": "Jewelry",
+    "description": "A bold chain-link necklace in polished sterling silver. Chunky links with a modern toggle clasp. Wear alone for impact or layer with delicate chains for a curated look.",
+    "material": "Sterling Silver",
+    "color": "Silver",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "everyday",
+      "evening",
+      "casual",
+      "layering"
+    ],
+    "tags": [
+      "necklace",
+      "chain",
+      "sterling silver",
+      "chunky",
+      "modern"
+    ],
+    "image_prompt": "Chunky sterling silver chain link necklace on marble surface, clean studio lighting, luxury jewelry, toggle clasp detail, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_012.png",
+    "audience": "unisex"
+  },
+  {
+    "sku": "SKU-013",
+    "name": "Indigo Wide-Leg Denim",
+    "price": 185.0,
+    "category": "Bottoms",
+    "description": "Classic wide-leg jeans in deep indigo wash with a high waist and clean seam detailing. Premium denim with a touch of stretch for all-day comfort without sacrificing structure.",
+    "material": "Denim",
+    "color": "Indigo",
+    "sizes": [
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31",
+      "32"
+    ],
+    "occasions": [
+      "casual",
+      "weekend",
+      "brunch",
+      "travel"
+    ],
+    "tags": [
+      "jeans",
+      "wide-leg",
+      "high-waist",
+      "indigo",
+      "denim"
+    ],
+    "image_prompt": "Deep indigo wide-leg high-waist jeans on mannequin, clean studio lighting, premium denim texture visible, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_013.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-014",
+    "name": "Champagne Satin Cami",
+    "price": 125.0,
+    "category": "Tops",
+    "description": "A delicate camisole in lustrous champagne satin with adjustable spaghetti straps and a cowl neckline. Effortlessly transitions from undergarment to statement top.",
+    "material": "Satin",
+    "color": "Champagne",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "evening",
+      "date night",
+      "layering",
+      "going out"
+    ],
+    "tags": [
+      "cami",
+      "satin",
+      "cowl neck",
+      "champagne",
+      "delicate"
+    ],
+    "image_prompt": "Champagne satin camisole with cowl neckline on mannequin, warm soft lighting, luxury lingerie-inspired fashion, fabric sheen visible, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_014.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-015",
+    "name": "Emerald Cocktail Dress",
+    "price": 475.0,
+    "category": "Dresses",
+    "description": "A striking cocktail dress in deep emerald green with a structured bodice, off-shoulder neckline, and a flared skirt falling above the knee. Dramatic without being overdone.",
+    "material": "Duchess Satin",
+    "color": "Emerald Green",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "cocktail party",
+      "gala",
+      "holiday party",
+      "evening event"
+    ],
+    "tags": [
+      "cocktail",
+      "emerald",
+      "off-shoulder",
+      "structured",
+      "statement"
+    ],
+    "image_prompt": "Emerald green off-shoulder cocktail dress on mannequin, dramatic studio lighting, duchess satin fabric, structured bodice detail, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_015.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-016",
+    "name": "Caramel Trench Coat",
+    "price": 520.0,
+    "category": "Outerwear",
+    "description": "A timeless double-breasted trench coat in rich caramel. Water-resistant cotton twill with a classic belted waist, storm flap, and tortoiseshell buttons. Impeccable tailoring.",
+    "material": "Cotton Twill",
+    "color": "Caramel",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "work",
+      "travel",
+      "everyday",
+      "spring/fall"
+    ],
+    "tags": [
+      "trench coat",
+      "classic",
+      "belted",
+      "water-resistant",
+      "timeless"
+    ],
+    "image_prompt": "Caramel double-breasted trench coat on mannequin, classic studio lighting, belted waist detail, tortoiseshell buttons, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_016.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-017",
+    "name": "Cloud White Leather Sneakers",
+    "price": 245.0,
+    "category": "Shoes",
+    "description": "Minimalist low-top sneakers in pristine white leather with a subtle perforated detail on the sides. Cushioned insole and a clean rubber sole. Luxury meets comfort.",
+    "material": "Leather",
+    "color": "White",
+    "sizes": [
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12"
+    ],
+    "occasions": [
+      "casual",
+      "travel",
+      "weekend",
+      "everyday"
+    ],
+    "tags": [
+      "sneakers",
+      "white",
+      "minimalist",
+      "leather",
+      "comfort"
+    ],
+    "image_prompt": "Pristine white leather minimalist sneakers on clean white surface, bright studio lighting, subtle perforation detail, luxury casual footwear, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_017.png",
+    "audience": "unisex"
+  },
+  {
+    "sku": "SKU-018",
+    "name": "Ruby Beaded Clutch",
+    "price": 295.0,
+    "category": "Bags",
+    "description": "A hand-beaded evening clutch in rich ruby red with an art deco geometric pattern. Gold-tone frame closure and an optional chain strap. A conversation-starting accessory.",
+    "material": "Beaded",
+    "color": "Ruby Red",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "gala",
+      "wedding",
+      "cocktail party",
+      "evening"
+    ],
+    "tags": [
+      "clutch",
+      "beaded",
+      "art deco",
+      "evening",
+      "ruby"
+    ],
+    "image_prompt": "Ruby red hand-beaded clutch with art deco pattern on velvet surface, dramatic lighting, gold frame closure visible, luxury evening accessory, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_018.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-019",
+    "name": "Slate Wool Tailored Trousers",
+    "price": 265.0,
+    "category": "Bottoms",
+    "description": "Perfectly tailored straight-leg trousers in fine slate grey wool. Pressed center crease, hook-and-bar closure, and slash pockets. The foundation of a power wardrobe.",
+    "material": "Wool",
+    "color": "Slate Grey",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "office",
+      "business dinner",
+      "presentation",
+      "formal"
+    ],
+    "tags": [
+      "tailored",
+      "wool",
+      "formal",
+      "straight-leg",
+      "power dressing"
+    ],
+    "image_prompt": "Slate grey wool tailored trousers on mannequin, professional studio lighting, pressed crease detail, fine wool texture, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_019.png",
+    "audience": "unisex"
+  },
+  {
+    "sku": "SKU-020",
+    "name": "Ivory Lace Bodysuit",
+    "price": 165.0,
+    "category": "Tops",
+    "description": "A romantic bodysuit in delicate ivory lace with a high neckline and long sleeves. Scalloped edges and a snap closure. Layer under blazers or wear as a statement piece.",
+    "material": "Lace",
+    "color": "Ivory",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L"
+    ],
+    "occasions": [
+      "date night",
+      "evening",
+      "layering",
+      "going out"
+    ],
+    "tags": [
+      "bodysuit",
+      "lace",
+      "romantic",
+      "high-neck",
+      "ivory"
+    ],
+    "image_prompt": "Ivory lace bodysuit with high neckline on mannequin, soft warm lighting, delicate scalloped lace detail, romantic fashion, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_020.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-021",
+    "name": "Cobalt Structured Tote",
+    "price": 340.0,
+    "category": "Bags",
+    "description": "A bold structured tote in cobalt blue pebbled leather. Reinforced base, interior laptop sleeve, and polished silver hardware. Makes a statement at the office and beyond.",
+    "material": "Pebbled Leather",
+    "color": "Cobalt Blue",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "work",
+      "travel",
+      "everyday",
+      "meeting"
+    ],
+    "tags": [
+      "tote",
+      "structured",
+      "cobalt",
+      "work bag",
+      "laptop"
+    ],
+    "image_prompt": "Cobalt blue pebbled leather structured tote bag on desk surface, professional studio lighting, silver hardware detail, editorial accessories photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_021.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-022",
+    "name": "Terracotta Linen Jumpsuit",
+    "price": 275.0,
+    "category": "Dresses",
+    "description": "A wide-leg jumpsuit in warm terracotta linen with a fitted bodice and a cinched waist belt. Button-front detail and patch pockets. One piece, endless style.",
+    "material": "Linen",
+    "color": "Terracotta",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "brunch",
+      "vacation",
+      "casual",
+      "garden party"
+    ],
+    "tags": [
+      "jumpsuit",
+      "linen",
+      "wide-leg",
+      "one-piece",
+      "terracotta"
+    ],
+    "image_prompt": "Terracotta linen wide-leg jumpsuit on mannequin, bright natural lighting, cinched waist belt detail, button-front, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_022.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-023",
+    "name": "Onyx Silk Pocket Square",
+    "price": 65.0,
+    "category": "Accessories",
+    "description": "A luxurious pocket square in jet black silk twill with hand-rolled edges. Subtle tonal geometric print adds depth. The finishing touch for the discerning dresser.",
+    "material": "Silk",
+    "color": "Black",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "formal",
+      "business",
+      "wedding",
+      "evening"
+    ],
+    "tags": [
+      "pocket square",
+      "silk",
+      "black",
+      "formal",
+      "menswear"
+    ],
+    "image_prompt": "Black silk pocket square with subtle geometric pattern on dark wood surface, elegant lighting, hand-rolled edges visible, menswear accessory, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_023.png",
+    "audience": "men"
+  },
+  {
+    "sku": "SKU-024",
+    "name": "Rose Gold Chronograph Watch",
+    "price": 580.0,
+    "category": "Accessories",
+    "description": "An elegant chronograph watch with a rose gold case and mesh bracelet. Mother-of-pearl dial with three subdials. Water resistant to 50 meters. Swiss quartz movement.",
+    "material": "Stainless Steel/Rose Gold PVD",
+    "color": "Rose Gold",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "everyday",
+      "work",
+      "gift",
+      "special occasion"
+    ],
+    "tags": [
+      "watch",
+      "rose gold",
+      "chronograph",
+      "Swiss",
+      "luxury"
+    ],
+    "image_prompt": "Rose gold chronograph watch with mesh bracelet on marble surface, soft studio lighting, mother-of-pearl dial detail, luxury timepiece, editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_024.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-025",
+    "name": "Charcoal Pinstripe Vest",
+    "price": 195.0,
+    "category": "Tops",
+    "description": "A sharp single-breasted vest in charcoal wool with subtle chalk pinstripes. Five-button front with an adjustable back cinch. Layer over shirts or wear boldly over a tee.",
+    "material": "Wool",
+    "color": "Charcoal Pinstripe",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "office",
+      "evening",
+      "smart casual",
+      "layering"
+    ],
+    "tags": [
+      "vest",
+      "pinstripe",
+      "tailored",
+      "layering",
+      "charcoal"
+    ],
+    "image_prompt": "Charcoal pinstripe wool vest on mannequin, professional studio lighting, five-button detail, chalk stripe pattern visible, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_025.png",
+    "audience": "men"
+  },
+  {
+    "sku": "SKU-026",
+    "name": "Lavender Organza Scarf",
+    "price": 95.0,
+    "category": "Accessories",
+    "description": "A floaty oversized scarf in sheer lavender organza with delicate tonal embroidery along the borders. Wear draped, tied, or as a head wrap for endless styling possibilities.",
+    "material": "Organza",
+    "color": "Lavender",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "spring",
+      "garden party",
+      "brunch",
+      "travel"
+    ],
+    "tags": [
+      "scarf",
+      "organza",
+      "lavender",
+      "sheer",
+      "versatile"
+    ],
+    "image_prompt": "Lavender organza scarf with embroidered border draped on stand, soft diffused lighting, sheer fabric texture, delicate embroidery detail, editorial accessories photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_026.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-027",
+    "name": "Espresso Leather Belt",
+    "price": 135.0,
+    "category": "Accessories",
+    "description": "A classic belt in rich espresso brown full-grain leather with a brushed brass buckle. Vegetable-tanned and hand-finished \u2014 develops a beautiful patina over time.",
+    "material": "Full-Grain Leather",
+    "color": "Espresso Brown",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "everyday",
+      "work",
+      "casual",
+      "formal"
+    ],
+    "tags": [
+      "belt",
+      "leather",
+      "brass buckle",
+      "patina",
+      "classic"
+    ],
+    "image_prompt": "Espresso brown full-grain leather belt coiled on dark surface, warm lighting, brushed brass buckle detail, leather grain texture visible, editorial accessories photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_027.png",
+    "audience": "unisex"
+  },
+  {
+    "sku": "SKU-028",
+    "name": "Seafoam Chiffon Maxi Dress",
+    "price": 365.0,
+    "category": "Dresses",
+    "description": "An ethereal maxi dress in seafoam green chiffon with a pleated bodice and flowing skirt. Delicate cap sleeves and a hidden back zip. Pure romance in fabric form.",
+    "material": "Chiffon",
+    "color": "Seafoam Green",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL"
+    ],
+    "occasions": [
+      "wedding guest",
+      "gala",
+      "engagement party",
+      "formal"
+    ],
+    "tags": [
+      "maxi",
+      "chiffon",
+      "pleated",
+      "romantic",
+      "seafoam"
+    ],
+    "image_prompt": "Seafoam green chiffon maxi dress on mannequin, ethereal soft lighting, pleated bodice detail, flowing fabric movement, editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_028.png",
+    "audience": "women"
+  },
+  {
+    "sku": "SKU-029",
+    "name": "Graphite Merino Polo",
+    "price": 155.0,
+    "category": "Tops",
+    "description": "A refined polo shirt in extra-fine merino wool. Graphite grey with a ribbed collar and two-button placket. Temperature-regulating and wrinkle-resistant \u2014 perfect for travel.",
+    "material": "Merino Wool",
+    "color": "Graphite",
+    "sizes": [
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "occasions": [
+      "smart casual",
+      "travel",
+      "golf",
+      "business casual"
+    ],
+    "tags": [
+      "polo",
+      "merino",
+      "wrinkle-resistant",
+      "travel",
+      "refined"
+    ],
+    "image_prompt": "Graphite merino wool polo shirt on mannequin, clean studio lighting, ribbed collar detail, fine wool texture, smart casual editorial fashion photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_029.png",
+    "audience": "men"
+  },
+  {
+    "sku": "SKU-030",
+    "name": "Amber Tortoiseshell Sunglasses",
+    "price": 210.0,
+    "category": "Accessories",
+    "description": "Oversized cat-eye sunglasses in warm amber tortoiseshell acetate. Gradient brown lenses with UV400 protection. Italian-made frames with spring hinges for a comfortable fit.",
+    "material": "Acetate",
+    "color": "Amber Tortoiseshell",
+    "sizes": [
+      "One Size"
+    ],
+    "occasions": [
+      "everyday",
+      "vacation",
+      "driving",
+      "beach"
+    ],
+    "tags": [
+      "sunglasses",
+      "cat-eye",
+      "tortoiseshell",
+      "Italian",
+      "UV protection"
+    ],
+    "image_prompt": "Amber tortoiseshell cat-eye sunglasses on white surface, bright studio lighting, gradient brown lenses, Italian acetate detail, luxury eyewear editorial photography",
+    "image_url": "https://storage.googleapis.com/your-gcp-project-id-vogue-concierge/images/sku_030.png",
+    "audience": "unisex"
+  }
+]

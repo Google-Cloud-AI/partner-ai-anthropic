@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Environment / secrets — never commit real values
+.env
+
+# Google ADK local session state
+.adk/
+**/.adk/
+*session.db
+
+# Node / Next.js (UI)
+ui/node_modules/
+ui/.next/
+ui/out/
+
+# MCP Toolbox binary (downloaded locally)
+toolbox/toolbox
+toolbox/toolbox.exe
+
+# Build / logs / OS cruft
+*.log
+*.bak
+.DS_Store
+Thumbs.db
+
+# Personal / working docs — never publish
+*.docx

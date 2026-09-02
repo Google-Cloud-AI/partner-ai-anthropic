@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.env
+__pycache__
+*.pyc
+.pytest_cache
+scripts/
+tests/
+ui/node_modules
+ui/.next
