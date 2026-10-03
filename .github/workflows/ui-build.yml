@@ -1,0 +1,66 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# The Vogue Concierge UI is a Next.js static export: `next build` writes ui/out,
+# which the Dockerfile copies into the Python image for FastAPI to serve. Nothing
+# else in CI compiles JavaScript, so without this job a dependency bump that
+# breaks the build — or a package-lock.json that no longer matches package.json —
+# merges green and only fails later at `docker build`.
+
+name: ui-build
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '02-demos/vogue-concierge-react/ui/**'
+      - '.github/workflows/ui-build.yml'
+
+# Read-only: this job compiles the UI and reports, it never writes to the repo.
+permissions:
+  contents: read
+
+jobs:
+  vogue-concierge-react:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 02-demos/vogue-concierge-react/ui
+    steps:
+      # Actions are pinned to commit SHAs, not tags: zizmor enforces unpinned-uses
+      # as a mandatory check, and a tag can be repointed at new code.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # node:20-slim is what the Dockerfile's frontend-builder stage uses.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 02-demos/vogue-concierge-react/ui/package-lock.json
+
+      # `npm ci`, not `npm install`: it fails outright if package-lock.json and
+      # package.json have drifted, which is the same check the Docker build does.
+      - name: Install
+        run: npm ci
+
+      - name: Build static export
+        run: npm run build
+
+      # A green `next build` still leaves room for an empty export, so confirm the
+      # artefact the container actually serves exists and is not a stub.
+      - name: Verify export
+        run: |
+          test -f out/index.html || { echo "out/index.html missing"; exit 1; }
+          grep -q "Vogue Concierge" out/index.html \
+            || { echo "out/index.html did not render the app shell"; exit 1; }
