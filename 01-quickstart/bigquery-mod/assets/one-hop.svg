@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -14 984 314" width="984" height="314" role="img" aria-label="The usual OpenTelemetry export goes from Claude Code through the Telemetry API or an OTel collector, Cloud Logging and a Log Router sink to BigQuery. With the mod, Claude Code writes the same tables to BigQuery directly with tabledata.insertAll.">
+<title>The usual OpenTelemetry export goes from Claude Code through the Telemetry API or an OTel collector, Cloud Logging and a Log Router sink to BigQuery. With the mod, Claude Code writes the same tables to BigQuery directly with tabledata.insertAll.</title>
+<style>
+  .box { fill: #ffffff; stroke: #a7b2bc; stroke-width: 1.4; }
+  .box-new { stroke: #2c66c9; stroke-width: 2; }
+  .box-mod { fill: #e5edfa; stroke: #2c66c9; stroke-width: 1.4; }
+  .t { fill: #16212a; font: 500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .t-mod { fill: #2c66c9; font: 600 12px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .t-edge { fill: #64717c; font: 400 11.5px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .t-edge-new { fill: #2c66c9; font: 500 12px ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .t-row { fill: #64717c; font: 600 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; letter-spacing: 0.08em; }
+  .t-note { fill: #64717c; font: 400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .edge-old { stroke: #a7b2bc; stroke-width: 1.6; fill: none; }
+  .edge-new { stroke: #2c66c9; stroke-width: 2.4; fill: none; }
+  .head-old { fill: #a7b2bc; }
+  .head-new { fill: #2c66c9; }
+  .brace { stroke: #a7b2bc; stroke-width: 1.2; fill: none; }
+</style>
+<rect x="-11" y="-13" width="982" height="312" rx="12" fill="#ffffff" stroke="#d7dee4"/>
+  <defs>
+    <marker id="ah-old" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-old" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ah-new" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-new" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+
+  <text class="t-row" x="20" y="20">OPENTELEMETRY EXPORT</text>
+  <rect class="box box-old" x="20"  y="34" width="150" height="58" rx="8"/>
+  <rect class="box box-old" x="212" y="34" width="150" height="58" rx="8"/>
+  <rect class="box box-old" x="404" y="34" width="150" height="58" rx="8"/>
+  <rect class="box box-old" x="596" y="34" width="150" height="58" rx="8"/>
+  <rect class="box box-old" x="788" y="34" width="150" height="58" rx="8"/>
+  <text class="t" x="95"  y="68" text-anchor="middle">Claude Code</text>
+  <text class="t" x="287" y="60" text-anchor="middle">Telemetry API</text>
+  <text class="t-note" x="287" y="78" text-anchor="middle">or OTel collector</text>
+  <text class="t" x="479" y="68" text-anchor="middle">Cloud Logging</text>
+  <text class="t" x="671" y="68" text-anchor="middle">Log Router sink</text>
+  <text class="t" x="863" y="68" text-anchor="middle">BigQuery</text>
+  <line class="edge-old" x1="170" y1="63" x2="210" y2="63" marker-end="url(#ah-old)"/>
+  <line class="edge-old" x1="362" y1="63" x2="402" y2="63" marker-end="url(#ah-old)"/>
+  <line class="edge-old" x1="554" y1="63" x2="594" y2="63" marker-end="url(#ah-old)"/>
+  <line class="edge-old" x1="746" y1="63" x2="786" y2="63" marker-end="url(#ah-old)"/>
+  <text class="t-edge" x="191" y="112" text-anchor="middle">OTLP</text>
+  <text class="t-edge" x="383" y="112" text-anchor="middle">log entries</text>
+  <text class="t-edge" x="575" y="112" text-anchor="middle">filter</text>
+  <text class="t-edge" x="767" y="112" text-anchor="middle">copies rows</text>
+  <path class="brace" d="M212,124 L212,132 L746,132 L746,124"/>
+  <text class="t-note" x="479" y="150" text-anchor="middle">three services to set up, pay for and watch</text>
+
+  <text class="t-row" x="20" y="196">BIGQUERY-TELEMETRY MOD</text>
+  <rect class="box box-new" x="20" y="210" width="150" height="66" rx="8"/>
+  <text class="t" x="95" y="234" text-anchor="middle">Claude Code</text>
+  <rect class="box-mod" x="58" y="244" width="74" height="22" rx="11"/>
+  <text class="t-mod" x="95" y="259" text-anchor="middle">mod</text>
+  <rect class="box box-new" x="788" y="210" width="150" height="66" rx="8"/>
+  <text class="t" x="863" y="247" text-anchor="middle">BigQuery</text>
+  <line class="edge-new" x1="170" y1="243" x2="785" y2="243" marker-end="url(#ah-new)"/>
+  <text class="t-edge-new" x="479" y="233" text-anchor="middle">tabledata.insertAll over HTTPS</text>
+  <text class="t-note" x="479" y="264" text-anchor="middle">same tables: one per event, labels.* fields</text>
+</svg>

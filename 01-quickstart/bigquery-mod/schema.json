@@ -1,0 +1,105 @@
+[
+  {
+    "name": "timestamp",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "When Claude Code logged the event. Tables are partitioned by day on this column."
+  },
+  {
+    "name": "receiveTimestamp",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE",
+    "description": "When the mod received the event."
+  },
+  {
+    "name": "logName",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "projects/PROJECT/logs/EVENT, as in Cloud Logging; the log ID is the event name."
+  },
+  {
+    "name": "resource",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Monitored resource: always generic_task, with project_id, job, task_id (the hostname), location and namespace.",
+    "fields": [
+      {
+        "name": "type",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "labels",
+        "type": "RECORD",
+        "mode": "NULLABLE",
+        "fields": [
+          {
+            "name": "project_id",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          },
+          {
+            "name": "location",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          },
+          {
+            "name": "namespace",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          },
+          {
+            "name": "job",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          },
+          {
+            "name": "task_id",
+            "type": "STRING",
+            "mode": "NULLABLE"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "severity",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Always DEFAULT: Claude Code event records carry no severity."
+  },
+  {
+    "name": "textPayload",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "The record body, claude_code.EVENT."
+  },
+  {
+    "name": "labels",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "The record's attributes as strings, one field per attribute that setup.sh knows of (event-labels.json and EXTRA_LABELS); the JSON field extra_labels holds the rest.",
+    "fields": []
+  },
+  {
+    "name": "insertId",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Unique per record; the same on a retried insert."
+  },
+  {
+    "name": "trace",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "spanId",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "traceSampled",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE"
+  }
+]
