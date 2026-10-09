@@ -16,16 +16,31 @@
 # Claude Code `otelHeadersHelper`: prints the headers (as JSON) used to
 # authenticate OTLP exports directly to telemetry.googleapis.com.
 #
-# Claude Code runs this at startup and roughly every 29 minutes thereafter
-# (tunable with CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS). It must print a
-# single JSON object on stdout.
+# Claude Code runs this at startup and then every
+# CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS (default ~29 minutes; this folder
+# sets 3 minutes — see below). It must print a single JSON object on stdout.
 #
 # WHY THIS SCRIPT EXISTS
-#   Google access tokens expire after 60 minutes. Because Claude Code re-runs
-#   this helper every ~29 minutes, the token in use is never more than ~29
-#   minutes old, so the expiry is never reached. That is what makes the
-#   collectorless design viable — no sidecar, daemon or Cloud Run service is
-#   needed just to refresh a credential.
+#   Google access tokens expire after 60 minutes, and an exporter handed a
+#   static token just starts failing when the hour is up. Re-running a helper is
+#   what avoids needing a sidecar, daemon or Cloud Run service purely to refresh
+#   a credential.
+#
+#   WHAT MATTERS IS THE TOKEN'S REMAINING LIFETIME, NOT ITS AGE. Neither source
+#   below mints a fresh token per call: the metadata server and
+#   `gcloud auth print-access-token` both return a CACHED token, replacing it
+#   only once it is within ~5 minutes of expiry. Measured here, three successive
+#   calls returned expires_in of 2675, 2660 and 2619 seconds — one token,
+#   ageing. A call can therefore hand back a token with five minutes of life
+#   left, and "we re-run every 29 minutes" does not bound the age of the token
+#   actually in use.
+#
+#   That is why print-settings.sh sets the debounce to 180000 (3 minutes).
+#   Because any token handed out has at least ~5 minutes left, re-running inside
+#   that window means the token in use never expires. At the 29-minute default a
+#   worst-case token dies ~24 minutes before its replacement arrives and every
+#   export in the gap is rejected — intermittent, phase-dependent, and invisible
+#   unless you go looking.
 #
 #   This only holds over http/protobuf or http/json. Under the grpc protocol
 #   Claude Code ignores this helper and uses the static OTEL_EXPORTER_OTLP_HEADERS
@@ -49,9 +64,24 @@
 #   2. gcloud           — on a laptop, `gcloud auth print-access-token` uses the
 #      developer's own credentials. Requires `gcloud auth login`.
 #
-# Unlike the collector path, no service-account impersonation is involved: the
-# developer's own identity needs roles/telemetry.writer on the destination
-# project, so there is no invoker SA to stand in for them.
+# WHO IS ACTUALLY AUTHENTICATED, which is easy to get wrong:
+#   Metadata wins whenever it answers, so on GCE and Cloud Workstations the
+#   export is authenticated by the MACHINE's service account — even if the
+#   developer is signed in with gcloud on that same box. Only off GCP does the
+#   developer's own credential get used. Both principals therefore need
+#   roles/telemetry.writer: config.env has DEVELOPERS for the humans and
+#   MACHINE_MEMBERS for the VM/Workstation service accounts, and
+#   enable-and-grant.sh grants both.
+#
+#   Metadata is tried first deliberately. It is a local call on a link-local
+#   address, whereas gcloud is a subprocess that costs the better part of a
+#   second — and with the 3-minute debounce above this script runs around twenty
+#   times an hour.
+#
+#   None of this affects attribution. user.email is resolved separately by
+#   print-settings.sh and is not derived from whoever holds this token; the two
+#   are independent by design. Do not read a row's user_email as evidence of
+#   which credential sent it.
 
 set -euo pipefail
 

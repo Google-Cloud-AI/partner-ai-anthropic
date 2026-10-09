@@ -52,11 +52,14 @@ echo "   sink / dataset:      ${SINK_ID} → ${SINK_DATASET} (${BQ_LOCATION})"
 echo
 
 # ---- 1. Enable APIs ---------------------------------------------------------
-# No monitoring.googleapis.com: this path writes no metrics.
+# monitoring.googleapis.com is needed to STORE and READ the metrics, even though
+# clients never call it directly — they export everything to
+# telemetry.googleapis.com, which fans out to Logging and Monitoring.
 echo "==> Enabling APIs (idempotent)"
 gcloud services enable \
   telemetry.googleapis.com \
   logging.googleapis.com \
+  monitoring.googleapis.com \
   bigquery.googleapis.com \
   --project="${PROJECT}" --quiet
 # The quota project needs Service Usage reachable even when it is a different
@@ -66,29 +69,29 @@ if [[ "${QUOTA_PROJECT}" != "${PROJECT}" ]]; then
     --project="${QUOTA_PROJECT}" --quiet
 fi
 
-# ---- 2. Retention -----------------------------------------------------------
-# Only relevant until the exclusion is applied; after that BigQuery holds the
-# logs and you set retention on the dataset/partitions instead.
-if [[ -n "${LOG_RETENTION_DAYS:-}" ]]; then
-  echo "==> Setting _Default bucket retention to ${LOG_RETENTION_DAYS} days"
-  gcloud logging buckets update _Default \
-    --location=global \
-    --retention-days="${LOG_RETENTION_DAYS}" \
-    --project="${PROJECT}" \
-    --quiet >/dev/null
-fi
-
-# ---- 3. Grant developers ----------------------------------------------------
+# ---- 2. Grant the principals that actually send ------------------------------
 # Two roles on (potentially) two different projects:
 #   roles/telemetry.writer                    on the DESTINATION project
 #   roles/serviceusage.serviceUsageConsumer   on the QUOTA project
-# roles/monitoring.metricWriter is NOT sufficient — it authorises
-# monitoring.googleapis.com, which this path never calls.
-if [[ -z "${DEVELOPERS:-}" ]]; then
-  echo "==> No DEVELOPERS set; skipping IAM grants"
+# roles/monitoring.metricWriter is NOT sufficient and is NOT required, even now
+# that metrics are enabled: it authorises monitoring.googleapis.com, which
+# clients never call. Everything goes to telemetry.googleapis.com, so
+# roles/telemetry.writer covers both signals.
+#
+# TWO LISTS, because the sender is not always the developer. On a laptop
+# otel-headers-helper.sh falls through to `gcloud auth print-access-token` and
+# the developer's own credential is used, so DEVELOPERS is what matters. On GCE
+# and Cloud Workstations the metadata server answers first and the MACHINE's
+# service account is used instead — even for a developer signed in with gcloud.
+# Granting only DEVELOPERS leaves every export from GCP compute rejected.
+# Attribution is unaffected either way: user.email is resolved per developer by
+# print-settings.sh and is independent of whoever holds the token.
+TELEMETRY_MEMBERS="${DEVELOPERS:-} ${MACHINE_MEMBERS:-}"
+if [[ -z "${TELEMETRY_MEMBERS// /}" ]]; then
+  echo "==> No DEVELOPERS or MACHINE_MEMBERS set; skipping IAM grants"
 else
   echo "==> Granting telemetry access"
-  for member in ${DEVELOPERS}; do
+  for member in ${TELEMETRY_MEMBERS}; do
     gcloud projects add-iam-policy-binding "${PROJECT}" \
       --member="${member}" \
       --role="roles/telemetry.writer" \
@@ -101,7 +104,7 @@ else
   done
 fi
 
-# ---- 4. BigQuery dataset ----------------------------------------------------
+# ---- 3. BigQuery dataset ----------------------------------------------------
 echo "==> Creating BigQuery dataset '${SINK_DATASET}'"
 if bq --project_id="${PROJECT}" show --dataset "${SINK_DATASET}" >/dev/null 2>&1; then
   echo "   - already exists"
@@ -112,7 +115,7 @@ else
   echo "   - created"
 fi
 
-# ---- 5. Log Router sink -----------------------------------------------------
+# ---- 4. Log Router sink -----------------------------------------------------
 # Match every Claude Code log, whatever the event type. Key on the RESOURCE, not
 # the log name: log names on this path are the bare event name (`api_request`),
 # not `claude_code.api_request` — the dotted string is the entry's text_payload,
@@ -146,20 +149,30 @@ echo "==> Granting the sink's writer identity access to the dataset"
 WRITER="$(gcloud logging sinks describe "${SINK_ID}" \
   --project="${PROJECT}" --format='value(writerIdentity)')"
 if [[ -z "${WRITER}" ]]; then
-  echo "   ! could not read writerIdentity; grant roles/bigquery.dataEditor by hand" >&2
+  echo "   ! could not read writerIdentity; grant roles/bigquery.dataEditor and" >&2
+  echo "     roles/logging.logWriter by hand" >&2
 else
-  gcloud projects add-iam-policy-binding "${PROJECT}" \
-    --member="${WRITER}" \
-    --role="roles/bigquery.dataEditor" \
-    --condition=None --quiet >/dev/null
+  # Both roles are what Google documents for a sink destination:
+  # bigquery.dataEditor to write the rows, and logging.logWriter for
+  # logging.logEntries.route. Rows did land here without logWriter, but an
+  # undocumented permission that happens to work today is not something to
+  # depend on.
+  for role in roles/bigquery.dataEditor roles/logging.logWriter; do
+    gcloud projects add-iam-policy-binding "${PROJECT}" \
+      --member="${WRITER}" \
+      --role="${role}" \
+      --condition=None --quiet >/dev/null
+  done
   echo "   - ${WRITER}"
 fi
 
-# ---- 6. The exclusion, last and only on request -----------------------------
-# This is the step that actually stops the $0.50/GiB ingestion charge, and the
-# only irreversible one. It is deliberately NOT automatic: run traffic first,
-# confirm rows are landing in BigQuery, and only then exclude. A dropped log
-# entry cannot be recovered.
+# ---- 5. The exclusion, last and only on request -----------------------------
+# This is the step that actually stops the $0.50/GiB ingestion charge. The
+# exclusion itself can be lifted later:
+#   gcloud logging sinks update _Default --remove-exclusions=claude-code-excluded
+# What cannot be undone is the data: entries dropped while it is on never reach
+# _Default and cannot be recovered. So it is deliberately NOT automatic — run
+# traffic first, confirm rows are landing in BigQuery, and only then exclude.
 echo
 echo "==> Log Router exclusion (the part that stops the ingestion charge)"
 if gcloud logging sinks describe _Default --project="${PROJECT}" \
@@ -185,10 +198,12 @@ else
             --project=${PROJECT}
 
    After step 4 these BigQuery tables are the ONLY copy of this telemetry, and
-   the Logs Explorer stops showing it. Exclusions are irreversible.
+   the Logs Explorer stops showing it. The exclusion can be lifted again with
+   --remove-exclusions=claude-code-excluded, but whatever it dropped while it
+   was on is gone for good.
 EOF
 fi
 
 echo
-echo "Developers now run: ./print-settings.sh <their-email> --merge"
+echo "Developers now run: ./print-settings.sh --merge"
 echo "Then restart Claude Code. Query with the rendered sql/*.local.sql files."

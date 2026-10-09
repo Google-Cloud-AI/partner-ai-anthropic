@@ -40,8 +40,8 @@ ask() {
   printf -v "${var}" '%s' "${answer:-${current}}"
 }
 
-echo "== Claude Code logs → BigQuery — setup =="
-echo "   Logs only — OTEL_METRICS_EXPORTER is set to none."
+echo "== Claude Code telemetry → BigQuery + Cloud Monitoring — setup =="
+echo "   Logs land in BigQuery; metrics land in Cloud Monitoring."
 echo
 
 ask PROJECT       "GCP project ID for telemetry to land in (required)"
@@ -53,6 +53,7 @@ done
 QUOTA_PROJECT="${QUOTA_PROJECT:-${PROJECT}}"
 ask QUOTA_PROJECT     "Quota project (x-goog-user-project; usually the same)"
 ask DEVELOPERS        "Who may send telemetry (prefer domain:yourco.com or group:team@yourco.com, so you never list individuals)"
+ask MACHINE_MEMBERS   "SAs of GCE/Workstation machines running Claude Code (serviceAccount:...; on GCP the MACHINE authenticates, not the developer)"
 ask FALLBACK_LOCATION "Region to report when off GCP (must be a real region; 'global' is rejected)"
 
 echo
@@ -64,7 +65,6 @@ echo "  confirmed rows are actually landing in BigQuery."
 ask SINK_ID           "Log Router sink name"
 ask SINK_DATASET      "BigQuery dataset for routed logs"
 ask BQ_LOCATION       "BigQuery location for the dataset (cannot be changed later)"
-ask LOG_RETENTION_DAYS "Retention on the _Default log bucket, in days (blank = leave unchanged)"
 
 cat > "${CONFIG}" <<EOF
 # Written by setup.sh. Gitignored — safe to hold real values.
@@ -73,6 +73,7 @@ cat > "${CONFIG}" <<EOF
 PROJECT="${PROJECT}"
 QUOTA_PROJECT="${QUOTA_PROJECT}"
 DEVELOPERS="${DEVELOPERS}"
+MACHINE_MEMBERS="${MACHINE_MEMBERS}"
 
 # ---- Resource attributes ------------------------------------------------------
 FALLBACK_LOCATION="${FALLBACK_LOCATION}"
@@ -81,7 +82,6 @@ FALLBACK_LOCATION="${FALLBACK_LOCATION}"
 SINK_ID="${SINK_ID}"
 SINK_DATASET="${SINK_DATASET}"
 BQ_LOCATION="${BQ_LOCATION}"
-LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS}"
 EOF
 echo
 echo "==> Wrote ${CONFIG}"
