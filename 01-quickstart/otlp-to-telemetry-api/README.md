@@ -176,7 +176,8 @@ descriptors this export already produces.
 > unaffected either way; dense ones (`cost.usage`, `token.usage`) are where the
 > loss lands.
 
-For the collector-based alternative, see [`otel-bq/`](../otel-bq/).
+For the collector-based alternative, see
+[`otlp-to-collector/`](../otlp-to-collector/).
 
 ## Privacy
 
@@ -203,3 +204,8 @@ The redaction above was confirmed on this deployment on 2026-09-24: max
 `LENGTH(labels.response)` was 10 (the literal `<REDACTED>`) while
 `response_length` reported 222. That is a check of the default, not a guarantee
 independent of the settings.
+
+## License
+
+Apache License 2.0 — see the [LICENSE](../../LICENSE) at the repository root.
+Copyright 2026 The "Anthropic on Google Cloud" Authors.

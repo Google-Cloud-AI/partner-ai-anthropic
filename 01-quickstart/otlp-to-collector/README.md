@@ -121,7 +121,7 @@ in Google Workspace — no repo change, no redeploy. Only if you used an explici
        "OTEL_METRICS_EXPORTER": "otlp",
        "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
        "OTEL_EXPORTER_OTLP_ENDPOINT": "https://claude-otel-collector-XXXX.<region>.run.app",
-       "OTEL_METRIC_EXPORT_INTERVAL": "10000",
+       "OTEL_METRIC_EXPORT_INTERVAL": "60000",
        "OTEL_LOGS_EXPORT_INTERVAL": "5000",
        "OTEL_RESOURCE_ATTRIBUTES": "user.email=you@yourcompany.com"
      },
@@ -131,6 +131,14 @@ in Google Workspace — no repo change, no redeploy. Only if you used an explici
    > ⚠️ `otelHeadersHelper` is a **top-level key, a sibling of `env`** — not one
    > of the keys inside `env`. Putting it inside `env` is the #1 setup mistake and
    > results in an empty `Authorization` header (Cloud Run rejects the telemetry).
+
+   > ⚠️ **Do not lower `OTEL_METRIC_EXPORT_INTERVAL` below `15000`.** Cloud
+   > Monitoring enforces a minimum spacing between two points on the same time
+   > series and rejects anything closer, reported by the SDK only as
+   > `Bad Request`. These metrics are DELTA, so a rejected point is lost
+   > permanently rather than healing on the next write — cost reads low, and
+   > worse the busier you are. Measured at `10000`, spend under-reported by
+   > 15-21% under load. `OTEL_LOGS_EXPORT_INTERVAL` has no such floor.
 
 3. **Restart Claude Code** so it picks up the new environment.
 
@@ -303,4 +311,5 @@ Then remove the OTel keys / `otelHeadersHelper` from `~/.claude/settings.json`.
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](../../LICENSE).
+Apache License 2.0 — see the [LICENSE](../../LICENSE) at the repository root.
+Copyright 2026 The "Anthropic on Google Cloud" Authors.
