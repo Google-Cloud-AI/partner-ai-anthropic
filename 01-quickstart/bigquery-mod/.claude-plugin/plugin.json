@@ -1,0 +1,69 @@
+{
+  "name": "bigquery-telemetry",
+  "version": "0.1.0",
+  "description": "Copies Claude Code's OpenTelemetry event records into BigQuery, one table per event type, in the layout a Cloud Logging sink writes for records sent through Google's Telemetry API.",
+  "license": "Apache-2.0",
+  "userConfig": {
+    "project": {
+      "type": "string",
+      "title": "BigQuery project",
+      "description": "Google Cloud project ID that holds the BigQuery dataset."
+    },
+    "dataset": {
+      "type": "string",
+      "title": "BigQuery dataset",
+      "description": "Dataset that holds the tables, one per event type. Create them with setup.sh first.",
+      "default": "claude_code_telemetry"
+    },
+    "table_prefix": {
+      "type": "string",
+      "title": "Table name prefix",
+      "description": "Added to the front of every table name, for example to keep these tables apart from others in a shared dataset. Must match the TABLE_PREFIX setup.sh used. Leave empty for the names a Cloud Logging sink uses.",
+      "default": ""
+    },
+    "hostname_task_id": {
+      "type": "boolean",
+      "title": "Hostname as task_id",
+      "description": "Put this machine's hostname in resource.labels.task_id, unless OTEL_RESOURCE_ATTRIBUTES sets service.instance.id. Turn off to leave task_id empty and never look up the hostname.",
+      "default": true
+    },
+    "email_from_credentials": {
+      "type": "boolean",
+      "title": "Email from credentials",
+      "description": "Fill labels.user_email, on records that carry no user.email, with the email address of the account the mod's credentials belong to (the service account's with auth metadata). Turn off to send no address the record doesn't carry.",
+      "default": true
+    },
+    "on_auth_failure": {
+      "type": "string",
+      "title": "When credentials fail",
+      "description": "warn: show a warning above the prompt, with the fix, while rows can't be written for lack of Google credentials or BigQuery permission. block: also refuse prompts while there are no working credentials, so no session runs unrecorded (a missing permission still only warns).",
+      "default": "warn"
+    },
+    "auth": {
+      "type": "string",
+      "title": "Authentication",
+      "description": "adc: gcloud application-default credentials. gcloud: the gcloud CLI's account. metadata: the attached service account on Google Cloud (GCE, Cloud Run, GKE). none: no token, for a local test server.",
+      "default": "adc"
+    },
+    "quota_project": {
+      "type": "string",
+      "title": "Quota project",
+      "description": "Optional x-goog-user-project header, for user credentials that need a quota project.",
+      "default": ""
+    },
+    "flush_interval_seconds": {
+      "type": "number",
+      "title": "Flush interval (seconds)",
+      "description": "How often queued rows are sent.",
+      "default": 5,
+      "min": 1,
+      "max": 300
+    },
+    "api_base": {
+      "type": "string",
+      "title": "BigQuery API base URL",
+      "description": "Change only to point the mod at a test server.",
+      "default": "https://bigquery.googleapis.com"
+    }
+  }
+}
