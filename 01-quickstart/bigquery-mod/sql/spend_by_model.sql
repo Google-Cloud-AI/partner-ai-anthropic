@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
--- Spend per day and model, with the columns of the otel-bq quickstart's spend_by_model view.
+-- Spend per day and model, with the columns of the otlp-to-collector quickstart's spend_by_model view.
 -- Reads the api_request table; label values are strings, so numbers are cast.
 -- setup.sh fills in __PROJECT__, __DATASET__ (the views' dataset),
 -- __TABLE_DATASET__ and __TABLE_PREFIX__.

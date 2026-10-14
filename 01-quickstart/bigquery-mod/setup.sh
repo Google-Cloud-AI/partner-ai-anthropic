@@ -24,7 +24,7 @@
 #      extra_labels where the mod puts every other attribute, partitioned by
 #      day on timestamp.
 #   3. Views daily_spend and spend_by_model over the api_request table, with
-#      the columns of the otel-bq quickstart's views of those names.
+#      the columns of the otlp-to-collector quickstart's views of those names.
 #
 # Usage:
 #   PROJECT=your-project-id ./setup.sh

@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
--- Spend per day and user, with the columns of the otel-bq quickstart's daily_spend view.
+-- Spend per day and user, with the columns of the otlp-to-collector quickstart's daily_spend view.
 -- Reads the api_request table; label values are strings, so numbers are cast.
 -- A user is named by the user.email label, or else (also when it is empty)
 -- by the anonymous user.id.

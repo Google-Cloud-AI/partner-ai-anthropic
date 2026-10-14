@@ -1,0 +1,8 @@
+# Your real values (created by setup.sh from config.env.example)
+config.env
+
+# Project-specific SQL rendered by setup.sh from the sql/*.sql templates
+sql/*.local.sql
+
+# settings.json backups, if anyone runs the scripts from inside the repo
+*.bak.*

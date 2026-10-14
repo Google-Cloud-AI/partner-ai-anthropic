@@ -11,7 +11,7 @@ Exporting OpenTelemetry to BigQuery usually runs through Google's Telemetry API 
   <img alt="The usual OpenTelemetry export goes from Claude Code through the Telemetry API or an OTel collector, Cloud Logging and a Log Router sink to BigQuery. With the mod, Claude Code writes the same tables to BigQuery directly with tabledata.insertAll." src="assets/one-hop.svg">
 </picture>
 
-The tables look like the ones a Cloud Logging sink writes to a BigQuery dataset with partitioned tables, when Claude Code's OpenTelemetry export reaches Cloud Logging through Google's Telemetry API (`telemetry.googleapis.com`). There is one table per kind of event, named for the bare event (`api_request`), partitioned by day on `timestamp`. Columns have the sink's camelCase names (`logName`, `textPayload`, `resource.labels.task_id`), and `labels` is a RECORD of STRING fields, so numbers need `SAFE_CAST`. See [What a row contains](#what-a-row-contains). `setup.sh` creates the tables and two views, `daily_spend` and `spend_by_model`, with the columns of the [`otel-bq` quickstart](../otel-bq/)'s views of those names.
+The tables look like the ones a Cloud Logging sink writes to a BigQuery dataset with partitioned tables, when Claude Code's OpenTelemetry export reaches Cloud Logging through Google's Telemetry API (`telemetry.googleapis.com`). There is one table per kind of event, named for the bare event (`api_request`), partitioned by day on `timestamp`. Columns have the sink's camelCase names (`logName`, `textPayload`, `resource.labels.task_id`), and `labels` is a RECORD of STRING fields, so numbers need `SAFE_CAST`. See [What a row contains](#what-a-row-contains). `setup.sh` creates the tables and two views, `daily_spend` and `spend_by_model`, with the columns of the [`otlp-to-collector` quickstart](../otlp-to-collector/)'s views of those names.
 
 ## How this compares with OpenTelemetry export to Cloud Logging
 
@@ -248,7 +248,7 @@ Field access (`labels.extra_labels.team_id`) returns JSON; `STRING(...)` or `JSO
 
 ### The spend views
 
-`daily_spend` and `spend_by_model` were written for this mod. They have the columns of the `otel-bq` quickstart's views of the same names, and read the `api_request` table, keeping one row per `insertId` and `timestamp` (see [Limitations](#limitations)). Each user is named by `labels.user_email`, or else (also when it is empty) as `id:` followed by the anonymous `labels.user_id`.
+`daily_spend` and `spend_by_model` were written for this mod. They have the columns of the `otlp-to-collector` quickstart's views of the same names, and read the `api_request` table, keeping one row per `insertId` and `timestamp` (see [Limitations](#limitations)). Each user is named by `labels.user_email`, or else (also when it is empty) as `id:` followed by the anonymous `labels.user_id`.
 
 On Vertex AI, Claude Code sends no email, so `daily_spend` shows the address the mod takes from the credentials (see [The email address](#the-email-address)). With `auth: metadata` that is the service account's, and with `email_from_credentials` off or a token without the email scope, users show as `id:` and their `user.id`.
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Copyright 2026 Google LLC
+# Copyright 2026 The "Anthropic on Google Cloud" Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -63,6 +63,13 @@ if [[ "${MERGE}" -eq 1 ]]; then
   BACKUP="${SETTINGS}.bak.$(date +%Y%m%d-%H%M%S)"
   cp "${SETTINGS}" "${BACKUP}"
   TMP="$(mktemp)"
+  # OTEL_METRIC_EXPORT_INTERVAL must stay well above ~15s. Cloud Monitoring
+  # enforces a minimum spacing between two points on the SAME time series and
+  # rejects anything closer; the SDK surfaces that only as "Bad Request", so the
+  # data is dropped silently. Because these metrics are DELTA, a rejected write
+  # loses its value permanently — a cumulative counter would self-heal on the
+  # next point, a delta cannot. 10000 sat exactly on the floor and under-reported
+  # spend by 15-21% under load. 60000 is the OpenTelemetry default.
   jq \
     --arg ep "${ENDPOINT}" --arg email "user.email=${EMAIL}" --arg helper "${HELPER}" '
     .env = ((.env // {}) + {
@@ -71,7 +78,7 @@ if [[ "${MERGE}" -eq 1 ]]; then
       "OTEL_METRICS_EXPORTER": "otlp",
       "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
       "OTEL_EXPORTER_OTLP_ENDPOINT": $ep,
-      "OTEL_METRIC_EXPORT_INTERVAL": "10000",
+      "OTEL_METRIC_EXPORT_INTERVAL": "60000",
       "OTEL_LOGS_EXPORT_INTERVAL": "5000",
       "OTEL_RESOURCE_ATTRIBUTES": $email
     })
@@ -92,6 +99,12 @@ cat <<EOF
 #   - "otelHeadersHelper" is a TOP-LEVEL key, a SIBLING of "env" (not inside it)
 # If you already have a settings.json, merge these in (or re-run with --merge to
 # do it automatically). Then restart Claude Code.
+#
+# Do not lower OTEL_METRIC_EXPORT_INTERVAL below 15000. Cloud Monitoring rejects
+# a point that lands too soon after the previous one on the same series, the SDK
+# reports it only as "Bad Request", and because these metrics are DELTA the
+# dropped value is gone for good. Cost then reads low, and worse the busier you
+# are. OTEL_LOGS_EXPORT_INTERVAL has no such floor and is fine where it is.
 
 {
   "env": {
@@ -100,7 +113,7 @@ cat <<EOF
     "OTEL_METRICS_EXPORTER": "otlp",
     "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
     "OTEL_EXPORTER_OTLP_ENDPOINT": "${ENDPOINT}",
-    "OTEL_METRIC_EXPORT_INTERVAL": "10000",
+    "OTEL_METRIC_EXPORT_INTERVAL": "60000",
     "OTEL_LOGS_EXPORT_INTERVAL": "5000",
     "OTEL_RESOURCE_ATTRIBUTES": "user.email=${EMAIL}"
   },
