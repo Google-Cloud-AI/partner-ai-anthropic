@@ -66,10 +66,12 @@ test('a record becomes a row in its event\'s table, in the sink\'s layout', asyn
     severity: 'DEFAULT',
     textPayload: 'claude_code.api_request',
     // The record's attributes only, as strings, under the sink's field names.
+    // A user.email copied from OTEL_RESOURCE_ATTRIBUTES doesn't name the user:
+    // it is kept aside, and the credentials' email fills user_email when sent.
     labels: {
       gcp_project_id: 'example-project',
       cloud_region: 'us-east5',
-      user_email: 'ada@example.com',
+      extra_labels: '{"user.email":"ada@example.com"}',
       session_id: 'session-1',
       event_name: 'api_request',
       event_sequence: '34',
@@ -98,9 +100,41 @@ test('label keys get the field names a sink gives them', async () => {
   expect(fieldNameOf('__proto__')).toBe('proto__')
   expect(fieldNameOf('...')).toBe('')
   expect(fieldNameOf('x'.repeat(200)).length).toBe(128)
-  // Two keys that get the same name: the first one stays. A key with no name left is skipped.
+  // Two keys that get the same name: the first one stays, and the other goes
+  // into extra_labels under its own key. A key with no name left is skipped.
   const { json } = rowOf({ ...apiRequest, attributes: { 'team.id': 'a', team_id: 'b', '...': 'c' } }, context, 'id-4', '')
-  expect(json.labels).toEqual({ team_id: 'a' })
+  expect(json.labels).toEqual({ team_id: 'a', extra_labels: '{"team_id":"b"}' })
+})
+
+test('an attribute from OTEL_RESOURCE_ATTRIBUTES never takes a field from one the record has of its own', async () => {
+  // OTEL_RESOURCE_ATTRIBUTES spells the key user_email; Claude Code sets user.email itself.
+  const forged = sessionFieldsOf(resourceAttributesOf('user_email=forged@example.com', undefined), 'p', 'h')
+  const record = { ...apiRequest, attributes: { user_email: 'forged@example.com', 'user.email': 'ada@example.com' } }
+  const { json } = rowOf(record, forged, 'id-14', '')
+  expect(json.labels.user_email).toBe('ada@example.com')
+  expect(JSON.parse(json.labels.extra_labels)).toEqual({ user_email: 'forged@example.com' })
+  // The same in the other order.
+  const reversed = rowOf({ ...apiRequest, attributes: { 'user.email': 'ada@example.com', user_email: 'forged@example.com' } }, forged, 'id-15', '').json
+  expect(reversed.labels.user_email).toBe('ada@example.com')
+  expect(JSON.parse(reversed.labels.extra_labels)).toEqual({ user_email: 'forged@example.com' })
+  // A value Claude Code set under the variable's own key isn't the variable's: it stays.
+  const overridden = rowOf({ ...apiRequest, attributes: { 'user.email': 'ada@example.com' } }, sessionFieldsOf(resourceAttributesOf('user.email=forged@example.com', undefined), 'p', 'h'), 'id-16', '').json
+  expect(overridden.labels.user_email).toBe('ada@example.com')
+  expect('extra_labels' in overridden.labels).toBe(false)
+  // With no user.email of Claude Code's own (Vertex AI), the variable's doesn't fill
+  // user_email either: it is kept aside, for the credentials' email to take its place.
+  const vertex = rowOf({ ...apiRequest, attributes: { 'user.email': 'forged@example.com', 'session.id': 's' } }, sessionFieldsOf(resourceAttributesOf('user.email=forged@example.com', undefined), 'p', 'h'), 'id-18', '').json
+  expect(vertex.labels).toEqual({ session_id: 's', extra_labels: '{"user.email":"forged@example.com"}' })
+
+  // On a table with labels.extra_labels the set-aside value joins the other extras;
+  // without one it is dropped, and named.
+  const labelsWith = (names: string[]) => [{ name: 'labels', type: 'RECORD', fields: names.map((name) => ({ name, type: 'STRING' })) }]
+  const withExtra = fitToTable(rowOf({ ...record, attributes: { ...record.attributes, ttft_ms: 412 } }, forged, 'id-17', '').json, labelsWith(['user_email', 'extra_labels']))
+  expect(withExtra.json.labels.user_email).toBe('ada@example.com')
+  expect(JSON.parse(withExtra.json.labels.extra_labels)).toEqual({ user_email: 'forged@example.com', ttft_ms: '412' })
+  const withoutExtra = fitToTable(json, labelsWith(['user_email']))
+  expect(withoutExtra.json.labels).toEqual({ user_email: 'ada@example.com' })
+  expect(withoutExtra.dropped.filter((d: string) => d.startsWith('labels.'))).toEqual(['labels.extra_labels'])
 })
 
 test('OTEL_SERVICE_NAME names the job', async () => {
@@ -149,6 +183,7 @@ test('with no OTEL_RESOURCE_ATTRIBUTES, the project comes from the options and t
       type: 'generic_task',
       labels: { project_id: 'example-project', task_id: 'laptop-7', location: '', namespace: '', job: 'claude-code' },
     },
+    resourceAttributes: attributes,
   })
 })
 
@@ -201,9 +236,10 @@ test('a row keeps only the labels its table has columns for, and names the rest'
   expect(fitted.json.labels).toEqual({ session_id: 'session-1', model: 'claude-example' })
   expect(fitted.json.resource).toEqual({ type: 'generic_task', labels: { project_id: 'bigquery-project' } })
   expect(fitted.json.insertId).toBe('id-9')
+  // The record's own attributes come first, then those copied from OTEL_RESOURCE_ATTRIBUTES.
   expect(fitted.dropped).toEqual([
-    'labels.gcp_project_id', 'labels.cloud_region', 'labels.user_email', 'labels.event_name',
-    'labels.event_sequence', 'labels.workspace_host_paths', 'labels.cost_usd',
+    'labels.extra_labels', 'labels.event_name', 'labels.event_sequence', 'labels.workspace_host_paths',
+    'labels.cost_usd', 'labels.gcp_project_id', 'labels.cloud_region',
     'resource.labels.location', 'resource.labels.namespace', 'resource.labels.job', 'resource.labels.task_id',
   ])
 })

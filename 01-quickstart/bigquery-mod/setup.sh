@@ -22,21 +22,26 @@
 #      camelCase columns in schema.json, a labels RECORD with one STRING field
 #      per attribute in event-labels.json and EXTRA_LABELS, plus a JSON field
 #      extra_labels where the mod puts every other attribute, partitioned by
-#      day on timestamp.
+#      day on timestamp. Also a table other_events, with only the attributes
+#      of every event, where the mod writes events that have no table yet.
 #   3. Views daily_spend and spend_by_model over the api_request table, with
 #      the columns of the otlp-to-collector quickstart's views of those names.
+#   4. In a third dataset (default ${BQ_DATASET}_deduped), one view per table,
+#      named like it, that keeps one row per insertId and timestamp.
 #
 # Usage:
 #   PROJECT=your-project-id ./setup.sh
 # Optional settings (environment variables):
-#   BQ_DATASET     dataset for the tables (default claude_code_telemetry)
-#   VIEWS_DATASET  dataset for the views  (default ${BQ_DATASET}_reporting)
-#   BQ_LOCATION    BigQuery location      (default US)
-#   TABLE_PREFIX   added to the front of every table name (default none);
-#                  set the mod's table_prefix option to the same value
-#   EXTRA_LABELS   comma-separated attribute names to add to every table,
-#                  such as keys you set in OTEL_RESOURCE_ATTRIBUTES
-#                  (for example EXTRA_LABELS=team.id,department)
+#   BQ_DATASET       dataset for the tables (default claude_code_telemetry)
+#   VIEWS_DATASET    dataset for the spend views (default ${BQ_DATASET}_reporting)
+#   DEDUPED_DATASET  dataset for the deduplicated views of the tables
+#                    (default ${BQ_DATASET}_deduped)
+#   BQ_LOCATION      BigQuery location (default US)
+#   TABLE_PREFIX     added to the front of every table name (default none);
+#                    set the mod's table_prefix option to the same value
+#   EXTRA_LABELS     comma-separated attribute names to add to every table,
+#                    such as keys you set in OTEL_RESOURCE_ATTRIBUTES
+#                    (for example EXTRA_LABELS=team.id,department)
 #
 # Safe to re-run, and worth re-running after upgrading Claude Code: tables
 # are created if missing, existing tables get any label fields they lack,
@@ -51,6 +56,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT="${PROJECT:?Set PROJECT to your Google Cloud project ID, e.g. PROJECT=my-project ./setup.sh}"
 BQ_DATASET="${BQ_DATASET:-claude_code_telemetry}"
 VIEWS_DATASET="${VIEWS_DATASET:-${BQ_DATASET}_reporting}"
+DEDUPED_DATASET="${DEDUPED_DATASET:-${BQ_DATASET}_deduped}"
 BQ_LOCATION="${BQ_LOCATION:-US}"
 TABLE_PREFIX="${TABLE_PREFIX:-}"
 EXTRA_LABELS="${EXTRA_LABELS:-}"
@@ -64,7 +70,7 @@ if [[ ! "${PROJECT}" =~ ^[a-z][a-z0-9.:-]*$ ]]; then
   echo "PROJECT must be a Google Cloud project ID, such as my-project." >&2
   exit 1
 fi
-for name in "${BQ_DATASET}" "${VIEWS_DATASET}"; do
+for name in "${BQ_DATASET}" "${VIEWS_DATASET}" "${DEDUPED_DATASET}"; do
   if [[ ! "${name}" =~ ^[A-Za-z0-9_]+$ ]]; then
     echo "Dataset name \"${name}\" may contain only letters, digits and underscores." >&2
     exit 1
@@ -75,7 +81,8 @@ if [[ ! "${TABLE_PREFIX}" =~ ^[A-Za-z0-9_]*$ ]]; then
   exit 1
 fi
 
-echo "==> Project ${PROJECT} (${BQ_LOCATION}): tables in ${BQ_DATASET}, views in ${VIEWS_DATASET}"
+echo "==> Project ${PROJECT} (${BQ_LOCATION}): tables in ${BQ_DATASET}, spend views in ${VIEWS_DATASET}," \
+  "deduplicated views in ${DEDUPED_DATASET}"
 
 # ---- 1. Datasets ---------------------------------------------------------------
 create_dataset() {
@@ -89,6 +96,7 @@ create_dataset() {
 }
 create_dataset "${BQ_DATASET}" "Claude Code telemetry written by the bigquery-telemetry mod"
 create_dataset "${VIEWS_DATASET}" "Views over the Claude Code telemetry in ${BQ_DATASET}"
+create_dataset "${DEDUPED_DATASET}" "The tables in ${BQ_DATASET}, one row per insertId and timestamp"
 
 # ---- 2. Tables ---------------------------------------------------------------
 # The columns one event's table needs: schema.json with one STRING field under
@@ -127,8 +135,19 @@ tmp="$(mktemp)"
 trap 'rm -f "${tmp}"' EXIT
 
 string_extra=0
-for event in $(jq -r '.events | keys[]' "${SCRIPT_DIR}/event-labels.json"); do
-  table="${TABLE_PREFIX}${event}"
+# Every event in event-labels.json, and other_events for the rest, such as
+# events a newer Claude Code adds: there the event's name is at the end of
+# logName, and its attributes are in extra_labels.
+read -r -a events <<<"$(jq -r '.events | keys | join(" ")' "${SCRIPT_DIR}/event-labels.json") other_events"
+
+# Creates the table for an event (other_events: the attributes of every
+# event only), or adds the label fields it lacks.
+ensure_table() {
+  local event="$1"
+  local table="${TABLE_PREFIX}${event}" description="Claude Code ${event} events, one row per record" want have merged
+  if [[ "${event}" == other_events ]]; then
+    description="Claude Code events that have no table of their own, one row per record"
+  fi
   want="$(want_schema "${event}")"
   if have="$(bq --project_id="${PROJECT}" show --schema --format=json "${PROJECT}:${BQ_DATASET}.${table}" 2>/dev/null)"; then
     merged="$(merge_schema "${have}" "${want}")"
@@ -148,12 +167,16 @@ for event in $(jq -r '.events | keys[]' "${SCRIPT_DIR}/event-labels.json"); do
     echo "==> Creating table ${table}"
     printf '%s\n' "${want}" >"${tmp}"
     bq --project_id="${PROJECT}" mk --table \
-      --description="Claude Code ${event} events, one row per record" \
+      --description="${description}" \
       --time_partitioning_field=timestamp \
       --time_partitioning_type=DAY \
       "${PROJECT}:${BQ_DATASET}.${table}" \
       "${tmp}" >/dev/null
   fi
+}
+
+for event in "${events[@]}"; do
+  ensure_table "${event}"
 done
 
 if ((string_extra > 0)); then
@@ -162,9 +185,12 @@ if ((string_extra > 0)); then
 fi
 
 # ---- 3. Views -----------------------------------------------------------------
+# render FILE [TABLE]: the SQL with the names filled in.
 render() {
   sed -e "s/__TABLE_DATASET__/${BQ_DATASET}/g" \
       -e "s/__TABLE_PREFIX__/${TABLE_PREFIX}/g" \
+      -e "s/__DEDUPED_DATASET__/${DEDUPED_DATASET}/g" \
+      -e "s/__VIEW_TABLE__/${2:-}/g" \
       -e "s/__DATASET__/${VIEWS_DATASET}/g" \
       -e "s/__PROJECT__/${PROJECT}/g" \
       "$1"
@@ -175,6 +201,12 @@ for view in daily_spend spend_by_model; do
   render "${SCRIPT_DIR}/sql/${view}.sql" |
     bq --project_id="${PROJECT}" query --nouse_legacy_sql >/dev/null
 done
+
+# One script, so the views take one query job rather than one each.
+echo "==> Creating or replacing ${#events[@]} deduplicated views in ${DEDUPED_DATASET}"
+for event in "${events[@]}"; do
+  render "${SCRIPT_DIR}/sql/deduped_table.sql" "${TABLE_PREFIX}${event}"
+done | bq --project_id="${PROJECT}" query --nouse_legacy_sql >/dev/null
 
 echo
 echo "Done. Point the mod at the tables with these plugin options:"

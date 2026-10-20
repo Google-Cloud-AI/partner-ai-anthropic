@@ -37,7 +37,7 @@ function stubHost(
   on: any,
   answers: { status: number; text: string }[] = [],
   saved = new Map<string, unknown>(),
-  { storeFull = false, tokenGate = Promise.resolve(), telemetryAnswer = { value: undefined } as object, missingTables = [] as string[], holdInsertsUntil = 0, hangTables = [] as string[], envDenied = false, fetchDenied = '', tokeninfo = { email: 'dev@example.com', email_verified: 'true' } as object, extraLabelsColumn = false, tokenFails = false } = {},
+  { storeFull = false, tokenGate = Promise.resolve(), telemetryAnswer = { value: undefined } as object, missingTables = [] as string[], holdInsertsUntil = 0, hangTables = [] as string[], envDenied = false, fetchDenied = '', tokeninfo = { email: 'dev@example.com', email_verified: 'true' } as object, extraLabelsColumn = false, tokenFails = false, env = {} as Record<string, string> } = {},
 ) {
   const requests: { url: string; headers: Record<string, string>; body: any; rows: any[] }[] = []
   const gets: string[] = []
@@ -51,7 +51,7 @@ function stubHost(
   // With holdInsertsUntil, no insertAll is answered until that many are waiting.
   let releaseInserts = () => {}
   const insertsReleased = new Promise<void>((resolve) => (releaseInserts = resolve))
-  on('env.get', () => (envDenied ? { deny: 'refused by a policy mod' } : { value: undefined }))
+  on('env.get', ($: any, e: any) => (envDenied ? { deny: 'refused by a policy mod' } : { value: env[e.name ?? e.key] }))
   on('session.version', () => ({ value: { version: '2.1.287', base: '2.1.287' } }))
   on('store.keys', () => ({ value: [...saved.keys()] }))
   on('store.get', ($: any, e: any) => ({ value: saved.get(e.key) }))
@@ -196,14 +196,54 @@ test('at exit, rows whose table answered leave the store while a slow table\'s r
 
 test('a missing table is looked up once, not for every record', { options }, async ($, on) => {
   const clock = mock.clock(on)
-  const host = stubHost(on, [], new Map(), { missingTables: ['new_event'] })
+  const host = stubHost(on, [], new Map(), { missingTables: ['new_event', 'other_events'] })
   await $.session.start({ surface: 'terminal', isInteractive: false, cwd: '/work' } as any)
   for (let i = 0; i < 3; i++) await $.telemetry.log(collectorRecord('new_event') as any)
   await clock.advance(5000)
   await $.telemetry.log(collectorRecord('new_event') as any)
   await clock.advance(5000)
-  expect(host.gets.length).toBe(1)
+  expect(host.gets.map((url) => url.split('/tables/')[1])).toEqual(['new_event?fields=schema', 'other_events?fields=schema'])
   expect(host.requests.length).toBe(0)
+})
+
+test('an event with no table goes to other_events, its own attributes in labels.extra_labels, with nothing shown in the transcript', { options }, async ($, on) => {
+  const clock = mock.clock(on)
+  const host = stubHost(on, [], new Map(), { missingTables: ['new_event'], extraLabelsColumn: true })
+  await $.session.start({ surface: 'terminal', isInteractive: false, cwd: '/work' } as any)
+  await $.telemetry.log(collectorRecord('new_event', { 'brand.new': 'x', cost_usd: 1 }) as any)
+  await clock.advance(5000)
+  await $.telemetry.log(collectorRecord('new_event') as any)
+  await clock.advance(5000)
+  expect(host.requests.map((r) => r.url.split('/tables/')[1])).toEqual(['other_events/insertAll', 'other_events/insertAll'])
+  const row = host.requests[0].rows[0].json
+  expect(row.logName).toBe('projects/example-project/logs/new_event')
+  expect(row.textPayload).toBe('claude_code.new_event')
+  expect(row.labels).toEqual({
+    event_name: 'new_event', session_id: 'session-1', cost_usd: '1', user_email: 'dev@example.com', extra_labels: '{"brand_new":"x"}',
+  })
+  expect(host.gets.map((url) => url.split('/tables/')[1])).toEqual(['new_event?fields=schema', 'other_events?fields=schema'])
+  expect(host.uiLines.some((l) => l.includes('new_event'))).toBe(false)
+})
+
+test('rows sent to other_events are retried there, with the same insertIds', { options }, async ($, on) => {
+  const clock = mock.clock(on)
+  const host = stubHost(on, [{ status: 500, text: '{"error":{"message":"backend"}}' }], new Map(), { missingTables: ['new_event'] })
+  await $.session.start({ surface: 'terminal', isInteractive: false, cwd: '/work' } as any)
+  await $.telemetry.log(collectorRecord('new_event') as any)
+  await clock.advance(5000)
+  await clock.advance(5000)
+  await clock.advance(5000)
+  expect(host.requests.map((r) => r.url.split('/tables/')[1])).toEqual(['other_events/insertAll', 'other_events/insertAll'])
+  expect(host.requests[1].rows[0].insertId).toBe(host.requests[0].rows[0].insertId)
+})
+
+test('other_events gets the table_prefix too', { options: { ...options, table_prefix: 'cc_' } }, async ($, on) => {
+  const clock = mock.clock(on)
+  const host = stubHost(on, [], new Map(), { missingTables: ['cc_new_event'] })
+  await $.session.start({ surface: 'terminal', isInteractive: false, cwd: '/work' } as any)
+  await $.telemetry.log(collectorRecord('new_event') as any)
+  await clock.advance(5000)
+  expect(host.requests.map((r) => r.url.split('/tables/')[1])).toEqual(['cc_other_events/insertAll'])
 })
 
 test('a table\'s columns are read once, not for every batch', { options }, async ($, on) => {
@@ -311,9 +351,9 @@ test('a 429 waits for the backoff instead of retrying at once', { options }, asy
   expect(host.requests[1].rows[0].insertId).toBe(host.requests[0].rows[0].insertId)
 })
 
-test('a missing table drops its batch once, and other tables still get their rows', { options }, async ($, on) => {
+test('with no other_events table either, a missing table drops its batch once, and other tables still get their rows', { options }, async ($, on) => {
   const clock = mock.clock(on)
-  const host = stubHost(on, [], new Map(), { missingTables: ['new_event'] })
+  const host = stubHost(on, [], new Map(), { missingTables: ['new_event', 'other_events'] })
   await $.session.start({ surface: 'terminal', isInteractive: false, cwd: '/work' } as any)
   await $.telemetry.log(collectorRecord('new_event') as any)
   await $.telemetry.log(collectorRecord('api_request') as any)
@@ -369,6 +409,16 @@ test('saved rows never go to a non-Google api_base, even when the session\'s set
   expect(host.gets.length).toBe(0)
   expect(host.tokens()).toBe(0)
   expect(host.uiLines.some((l) => l.includes('"api_base" option must be'))).toBe(true)
+})
+
+test('CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC alone doesn\'t stop the mod', { options }, async ($, on) => {
+  const clock = mock.clock(on)
+  const host = stubHost(on, [], new Map(), { env: { CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' } })
+  await $.session.start({ surface: 'terminal', isInteractive: false, cwd: '/work' } as any)
+  await $.telemetry.log(collectorRecord('api_request') as any)
+  await clock.advance(5000)
+  expect(host.requests.length).toBe(1)
+  expect(host.uiLines.some((l) => l.includes('no rows will be sent'))).toBe(false)
 })
 
 test('when Claude Code refuses every request, the mod stops and keeps the rows saved for a later session', { options }, async ($, on) => {
@@ -476,6 +526,18 @@ test('rows get the email address of the credentials, unless the record carries i
   expect(host.requests[0].rows.map((r: any) => r.json.labels.user_email)).toEqual(['dev@example.com', 'ada@example.com'])
   // Looked up once, with the token in the body rather than the URL.
   expect(host.lookups).toEqual([{ url: 'https://oauth2.googleapis.com/tokeninfo', body: 'access_token=token-1' }])
+})
+
+test('a user.email from OTEL_RESOURCE_ATTRIBUTES never names the user: the credentials\' email does', { options }, async ($, on) => {
+  const clock = mock.clock(on)
+  const host = stubHost(on, [], new Map(), { extraLabelsColumn: true, env: { OTEL_RESOURCE_ATTRIBUTES: 'user.email=forged@example.com' } })
+  await $.session.start({ surface: 'terminal', isInteractive: false, cwd: '/work' } as any)
+  // Claude Code copies the variable's keys onto every record.
+  await $.telemetry.log(collectorRecord('api_request', { 'user.email': 'forged@example.com' }) as any)
+  await clock.advance(5000)
+  const labels = host.requests[0].rows[0].json.labels
+  expect(labels.user_email).toBe('dev@example.com')
+  expect(JSON.parse(labels.extra_labels)).toEqual({ 'user.email': 'forged@example.com' })
 })
 
 test('with email_from_credentials off, no address is looked up or added', { options: { ...options, email_from_credentials: false } }, async ($, on) => {

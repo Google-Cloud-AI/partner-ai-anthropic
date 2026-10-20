@@ -151,10 +151,12 @@ export function tableNameOf(logId, prefix = '') {
 
 /**
  * Fields every row of a session shares: logProject (the project option, used
- * in logName and resource.labels.project_id) and resource.
+ * in logName and resource.labels.project_id) and resource. Also the resource
+ * attributes, which rowOf uses to tell a record's own attributes from those
+ * Claude Code copied from OTEL_RESOURCE_ATTRIBUTES.
  */
 export function sessionFieldsOf(resourceAttributes, project, hostname = '') {
-  return { logProject: project, resource: resourceOf(resourceAttributes, project, hostname) }
+  return { logProject: project, resource: resourceOf(resourceAttributes, project, hostname), resourceAttributes }
 }
 
 /**
@@ -165,12 +167,35 @@ export function sessionFieldsOf(resourceAttributes, project, hostname = '') {
  */
 export function rowOf(entry, context, insertId, receivedAt, tablePrefix = '') {
   // The record's attributes and nothing else, as strings under their sink
-  // field names. After cutting and renaming, the first of two equal names stays.
+  // field names. The record's own attributes pick first, then those Claude
+  // Code copied from OTEL_RESOURCE_ATTRIBUTES, so that variable can't replace
+  // what Claude Code sets; within each, when two keys get the same name
+  // ("team.id" and "team_id") the first stays. labels.user_email names an
+  // account someone signed in to, so a copied one never fills it: the
+  // credentials' email does, when the row is sent. Attributes that get no
+  // field this way, and any named extra_labels, go into labels.extra_labels
+  // under their own keys.
   const labels = Object.create(null)
+  const setAside = Object.create(null)
+  const resourceAttributes = context.resourceAttributes ?? {}
+  const own = []
+  const copied = []
   for (const [key, value] of Object.entries(entry.attributes ?? {})) {
-    const name = fieldNameOf(truncated(key, MAX_KEY_BYTES))
-    if (name && !(name in labels)) labels[name] = truncated(labelValueOf(value), MAX_VALUE_BYTES)
+    const fromResource = Object.hasOwn(resourceAttributes, key) && resourceAttributes[key] === labelValueOf(value)
+    ;(fromResource ? copied : own).push([key, value])
   }
+  for (const [i, [key, value]] of [...own, ...copied].entries()) {
+    const cutKey = truncated(key, MAX_KEY_BYTES)
+    const name = fieldNameOf(cutKey)
+    if (!name) continue
+    const text = truncated(labelValueOf(value), MAX_VALUE_BYTES)
+    if (name in labels || name === EXTRA_LABELS_FIELD || (name === USER_EMAIL_FIELD && i >= own.length)) {
+      setAside[cutKey] = text
+    } else {
+      labels[name] = text
+    }
+  }
+  if (Object.keys(setAside).length > 0) labels[EXTRA_LABELS_FIELD] = JSON.stringify(setAside)
   const logId = entry.event
   const span = entry.span
   const json = {
@@ -198,6 +223,8 @@ export function rowOf(entry, context, insertId, receivedAt, tablePrefix = '') {
 // has no field of its own for. setup.sh adds it to every table as a JSON
 // field; insertAll takes a JSON field's value as JSON text.
 export const EXTRA_LABELS_FIELD = 'extra_labels'
+// The labels field that names the user ("user.email" as a sink names it).
+export const USER_EMAIL_FIELD = 'user_email'
 
 /**
  * json fitted to the table's columns (fields, from tables.get): labels the
@@ -212,13 +239,16 @@ export function fitToTable(json, fields) {
   const hasExtra = labelNames.delete(EXTRA_LABELS_FIELD)
   const dropped = []
   const labels = {}
-  const extra = {}
-  for (const [name, value] of Object.entries(json.labels ?? {})) {
+  // What rowOf already set aside in labels.extra_labels, under the attributes' own keys.
+  const { [EXTRA_LABELS_FIELD]: setAside, ...fieldLabels } = json.labels ?? {}
+  const extra = setAside ? JSON.parse(setAside) : {}
+  if (setAside && !hasExtra) dropped.push('labels.' + EXTRA_LABELS_FIELD)
+  for (const [name, value] of Object.entries(fieldLabels)) {
     if (labelNames.has(name)) labels[name] = value
     else if (hasExtra) extra[name] = value
     else dropped.push('labels.' + name)
   }
-  if (Object.keys(extra).length > 0) labels[EXTRA_LABELS_FIELD] = JSON.stringify(extra)
+  if (hasExtra && Object.keys(extra).length > 0) labels[EXTRA_LABELS_FIELD] = JSON.stringify(extra)
   const resourceLabels = {}
   for (const [name, value] of Object.entries(json.resource?.labels ?? {})) {
     if (resourceNames.has(name)) resourceLabels[name] = value
