@@ -11,7 +11,7 @@ Exporting OpenTelemetry to BigQuery usually runs through Google's Telemetry API 
   <img alt="The usual OpenTelemetry export goes from Claude Code through the Telemetry API or an OTel collector, Cloud Logging and a Log Router sink to BigQuery. With the mod, Claude Code writes the same tables to BigQuery directly with tabledata.insertAll." src="assets/one-hop.svg">
 </picture>
 
-The tables look like the ones a Cloud Logging sink writes to a BigQuery dataset with partitioned tables, when Claude Code's OpenTelemetry export reaches Cloud Logging through Google's Telemetry API (`telemetry.googleapis.com`). There is one table per kind of event, named for the bare event (`api_request`), partitioned by day on `timestamp`. Columns have the sink's camelCase names (`logName`, `textPayload`, `resource.labels.task_id`), and `labels` is a RECORD of STRING fields, so numbers need `SAFE_CAST`. See [What a row contains](#what-a-row-contains). `setup.sh` creates the tables and two views, `daily_spend` and `spend_by_model`, with the columns of the [`otlp-to-collector` quickstart](../otlp-to-collector/)'s views of those names.
+The tables look like the ones a Cloud Logging sink writes to a BigQuery dataset with partitioned tables, when Claude Code's OpenTelemetry export reaches Cloud Logging through Google's Telemetry API (`telemetry.googleapis.com`). There is one table per kind of event, named for the bare event (`api_request`), partitioned by day on `timestamp`. Columns have the sink's camelCase names (`logName`, `textPayload`, `resource.labels.task_id`), and `labels` is a RECORD of STRING fields, so numbers need `SAFE_CAST`. See [What a row contains](#what-a-row-contains). `setup.sh` creates the tables, a view of each that leaves out repeated rows, and two spend views, `daily_spend` and `spend_by_model`, with the columns of the [`otlp-to-collector` quickstart](../otlp-to-collector/)'s views of those names.
 
 ## How this compares with OpenTelemetry export to Cloud Logging
 
@@ -28,8 +28,10 @@ Both can run at once: the mod passes every record on unchanged, so an OpenTeleme
 
 ```text
 Claude Code ──telemetry.log──> mod (queue, batch every 5 s) ──insertAll over HTTPS──> one BigQuery table per event
-     │                                                                                 (api_request, tool_result, …)
+     │                                                                                 (api_request, tool_result, …,
+     │                                                                                  other_events for the rest)
      └── the same record, unchanged, to your own OpenTelemetry export (if any)                │
+                                                                                               ├── a deduplicated view of each table
                                                                                                ├── daily_spend
                                                                                                └── spend_by_model
 ```
@@ -48,8 +50,9 @@ PROJECT=your-project-id ./setup.sh
 
 This creates, in `PROJECT`:
 
-- the dataset `claude_code_telemetry` (change with `BQ_DATASET`), holding one table per kind of event that Claude Code's [monitoring documentation](https://code.claude.com/docs/en/monitoring-usage#events) lists. Each table has the columns in [`schema.json`](./schema.json), plus one `labels` field for each attribute that documentation lists for that event or for every event (and a few Claude Code is known to send anyway), as kept in [`event-labels.json`](./event-labels.json), and for each `EXTRA_LABELS` key. Tables are partitioned by day on `timestamp`.
+- the dataset `claude_code_telemetry` (change with `BQ_DATASET`), holding one table per kind of event that Claude Code's [monitoring documentation](https://code.claude.com/docs/en/monitoring-usage#events) lists. Each table has the columns in [`schema.json`](./schema.json), plus one `labels` field for each attribute that documentation lists for that event or for every event (and a few Claude Code is known to send anyway), as kept in [`event-labels.json`](./event-labels.json), and for each `EXTRA_LABELS` key. Tables are partitioned by day on `timestamp`. A further table, `other_events`, has only the fields every event has, and holds events that have no table of their own (see [Events with no table](#events-with-no-table)).
 - the dataset `claude_code_telemetry_reporting` (change with `VIEWS_DATASET`), holding the views `daily_spend` and `spend_by_model` ([`sql/`](./sql/)), which read the `api_request` table (see [The spend views](#the-spend-views)).
+- the dataset `claude_code_telemetry_deduped` (change with `DEDUPED_DATASET`), holding a view of each table, named like it, that keeps one row per `insertId` and `timestamp` (see [The deduplicated views](#the-deduplicated-views)).
 
 Other settings:
 
@@ -57,30 +60,38 @@ Other settings:
 - `TABLE_PREFIX` is added to the front of every table name. Set the mod's `table_prefix` option to the same value.
 - `EXTRA_LABELS` is a comma-separated list of attribute names to give their own field in every table, for example `EXTRA_LABELS=cloud.region,team.id`. Attributes without their own field still arrive, in `labels.extra_labels` (see [Labels with no field](#labels-with-no-field)); a field of its own just makes one easier to query.
 
-The script is safe to re-run. It creates what is missing, adds label fields an existing table lacks, and replaces the views; it never removes anything. Re-run it after adding an `EXTRA_LABELS` key. BigQuery's streaming inserts can take a few minutes to see fields added to an existing table, and until then they drop values for those fields without an error.
+The script is safe to re-run. It creates what is missing, adds label fields an existing table lacks, and replaces the views; it never removes anything. Re-run it after adding an `EXTRA_LABELS` key or a kind of event to `event-labels.json`. BigQuery's streaming inserts can take a few minutes to see fields added to an existing table, and until then they drop values for those fields without an error.
 
 ## 2. Let developers write rows
 
-The mod reads each table's columns with `tables.get`, then streams rows with [`tabledata.insertAll`](https://cloud.google.com/bigquery/docs/reference/rest/v2/tabledata/insertAll). Writers need `bigquery.tables.get` and `bigquery.tables.updateData` on every table. Google's page also lists `bigquery.datasets.get`. The mod never creates or changes a table.
+The mod reads each table's columns with `tables.get`, then streams rows with the [Storage Write API (REST)](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery), which Google previously called the legacy [`tabledata.insertAll`](https://cloud.google.com/bigquery/docs/reference/rest/v2/tabledata/insertAll) method. Google recommends the gRPC Storage Write API for new projects, but a mod can only make HTTPS requests, and the REST API is still fully supported. Writers need `bigquery.tables.get` and `bigquery.tables.updateData` on every table. Google's page also lists `bigquery.datasets.get`, but inserting works without it. The mod never creates or changes a table.
 
-BigQuery Data Editor on the dataset would work, but it also lets every developer read everyone's rows and change or delete the tables. A narrower choice is a custom role with just the two table permissions, granted on the dataset to a group. None of this section was tested, so check the role before relying on it:
+BigQuery Data Editor on the dataset would work, but it also lets every developer read and delete everyone's rows, and change or delete the tables. A narrower choice is a custom role with just the two table permissions, granted on the dataset to a group. `bq add-iam-policy-binding` can't grant a role on a dataset (it answers "This feature requires allowlisting"), so add the group to the dataset's access list instead:
 
 ```bash
 gcloud iam roles create claudeCodeTelemetryWriter --project=your-project-id \
   --title="Claude Code telemetry writer" \
   --permissions=bigquery.tables.updateData,bigquery.tables.get
 
-bq add-iam-policy-binding \
-  --member=group:claude-code-users@example.com \
-  --role=projects/your-project-id/roles/claudeCodeTelemetryWriter \
-  your-project-id:claude_code_telemetry
+bq show --format=prettyjson your-project-id:claude_code_telemetry > dataset.json
+jq '{access: (.access + [{
+      role: "projects/your-project-id/roles/claudeCodeTelemetryWriter",
+      groupByEmail: "claude-code-users@example.com"}])}' dataset.json > access.json
+bq update --source access.json your-project-id:claude_code_telemetry
 ```
 
-If inserts then fail with a permission error naming `bigquery.datasets.get`, also grant that permission on the dataset.
+With this role writers can add rows and read table schemas, and can't remove or change a row once it is written. A test in October 2026, with a service account that had only this role on the dataset and BigQuery Job User on the project, could insert rows, but every one of these failed:
 
-With this role writers can add rows and read table schemas, but can't read any rows, nor reach the views. Rows are written by the developer's own machine, so anyone who can write can also write rows with made-up values, such as another person's `user.email` or a wrong `cost_usd`. The same is true of OpenTelemetry export, where each machine sets `OTEL_RESOURCE_ATTRIBUTES`.
+| Attempt | Fails for lack of |
+|---|---|
+| Read rows (`SELECT`, `tabledata.list`) | `bigquery.tables.getData` |
+| `DELETE`, `UPDATE` or `TRUNCATE TABLE`, even of the writer's own rows | `bigquery.tables.getData` |
+| Overwrite the table, or one day's partition, with a query job or a copy job | `bigquery.tables.create` |
+| Delete the table, or give it an expiration time | `bigquery.tables.delete`, `bigquery.tables.update` |
 
-People who read the views need BigQuery Data Viewer on both datasets and BigQuery Job User on a project. To let them read the views without reading the tables, make the views [authorized views](https://cloud.google.com/bigquery/docs/authorized-views) of the tables' dataset.
+Rows are written by the developer's own machine, so anyone who can write can also write rows with made-up values, such as another person's `user.email` or a wrong `cost_usd`. The same is true of OpenTelemetry export, where each machine sets `OTEL_RESOURCE_ATTRIBUTES`.
+
+People who read the views need BigQuery Data Viewer on the views' dataset and BigQuery Job User on a project. Views read the tables, so readers also need BigQuery Data Viewer on the tables' dataset, unless the views' dataset is an [authorized dataset](https://cloud.google.com/bigquery/docs/authorized-datasets) of the tables' dataset, which lets its current and future views read the tables for them. Don't give writers read access to the tables: with `bigquery.tables.getData`, which Data Viewer includes, the same test service account deleted rows with `DELETE`. So to show developers the spend views, authorize `claude_code_telemetry_reporting`. Don't authorize `claude_code_telemetry_deduped`: its views return every row of the tables, so readers of that dataset should be the people who may read the tables.
 
 ## 3. Install and configure the plugin
 
@@ -121,23 +132,22 @@ Then install it and set its options for everyone in [managed settings](https://c
   },
   "enabledPlugins": { "bigquery-telemetry@your-marketplace": true },
   "pluginConfigs": {
-    "bigquery-telemetry@your-marketplace": {
-      "options": { "project": "your-project-id", "dataset": "claude_code_telemetry" }
-    }
+    "bigquery-telemetry@your-marketplace": { "options": { "project": "your-project-id" } }
   }
 }
 ```
 
-Two things to know:
+Things to know:
 
+- **What it calls**: `claude plugin validate ./01-quickstart/bigquery-mod` lists every call the mod makes and every environment variable it reads. The calls that reach outside Claude Code are `$.http.fetch` (to BigQuery, to Google's `tokeninfo` endpoint for the email address, and to the metadata server with `auth: metadata`) and `$.process.run` (only `gcloud`, and `hostname` unless `hostname_task_id` is off or `OTEL_RESOURCE_ATTRIBUTES` sets `service.instance.id`).
 - **`claude -p` and CI**: marketplace plugins install in the background, so the first run can start without the mod. Set `CLAUDE_CODE_SYNC_PLUGIN_INSTALL=1` to make the run wait for the install.
-- **Organizations that allow only their own mods** (`allowManagedModsOnly` on the built-in guard, or `allowManagedHooksOnly`): a plugin Claude Code copies from a GitHub, git, URL or npm marketplace counts as the user's and will not load. To count as the organization's, the marketplace must be a directory on each machine, named by absolute path in managed settings and listing the plugin by relative path, which device management has to put there. See [Install your organization's mods](https://code.claude.com/docs/en/plugins/mods/admin).
+- **Developers can't turn the plugin off**, but they can change the copy Claude Code installs, or load another. Set `"disableSideloadFlags": true` in managed settings so that no one can load a plugin for a session with `--plugin-dir` or `--plugin-url`. To stop users' own mods from running and to install yours so that only an administrator can change it, see Claude Code's [mods admin guide](https://code.claude.com/docs/en/plugins/mods/admin).
 
 ### Who and where each row comes from
 
 Developers set nothing beyond the plugin. Each row gets:
 
-- **The developer's email address** in `labels.user_email`: the account the mod's credentials belong to (see [The email address](#the-email-address)), unless the record already carries a `user.email`.
+- **The developer's email address** in `labels.user_email`: the account they signed in to (see [The email address](#the-email-address)).
 - **The project** in `logName` and `resource.labels.project_id`: the `project` option.
 - **The machine** in `resource.labels.task_id`: its hostname, in a `generic_task` resource with `job` `claude-code`. See [The resource](#the-resource).
 
@@ -150,7 +160,7 @@ Developers set nothing beyond the plugin. Each row gets:
 | `project` | (none; required) | Project that holds the dataset |
 | `dataset` | `claude_code_telemetry` | Dataset that holds the tables, one per kind of event |
 | `table_prefix` | (none) | Added to the front of every table name, for example to keep these tables apart from others in a shared dataset. Use the same value as `TABLE_PREFIX` in `setup.sh`. A Cloud Logging sink adds no prefix, so queries written for sink tables need it added. |
-| `email_from_credentials` | `true` | Fill `labels.user_email`, on records that carry no `user.email`, with the email address of the account the mod's credentials belong to (see [The email address](#the-email-address)). Set to `false` to send no address the record doesn't carry. |
+| `email_from_credentials` | `true` | Fill `labels.user_email` with the credentials' email address when Claude Code sets none (see [The email address](#the-email-address)). Set to `false` to leave it empty then. |
 | `hostname_task_id` | `true` | Put the machine's hostname in `resource.labels.task_id` (see [The resource](#the-resource)). Set to `false` to leave `task_id` empty and never look up the hostname. A `service.instance.id` you set in `OTEL_RESOURCE_ATTRIBUTES` is still used. |
 | `auth` | `adc` | How the mod gets a Google access token; see [Authentication](#authentication) |
 | `on_auth_failure` | `warn` | `warn` shows a warning above the prompt while rows can't be written for lack of credentials or permission; `block` also refuses prompts while there are no working credentials. See [When credentials fail](#when-credentials-fail) |
@@ -191,7 +201,7 @@ Access tokens last about an hour and `gcloud` renews them on its own, so nothing
 
 ![With auth: gcloud and no signed-in account, Claude Code shows the warning band above the prompt, with 15 rows waiting, and a toast in the top-right corner](assets/credential-warnings.png)
 
-`block` is only enforcement if developers can't remove the mod: install it through managed settings, and for organizations that allow only their own mods, from a managed local marketplace (see [Roll it out with managed settings](#roll-it-out-with-managed-settings)). It guarantees that rows are being written, not what they contain. Unattended runs need credentials that don't expire, such as `auth: metadata`.
+`block` is only enforcement if developers can't remove or change the mod (see [Roll it out with managed settings](#roll-it-out-with-managed-settings)). It guarantees that rows are being written, not what they contain. Unattended runs need credentials that don't expire, such as `auth: metadata`.
 
 ### The email address
 
@@ -201,7 +211,7 @@ With `email_from_credentials` on (the default), the mod looks up, once per sessi
 - **`metadata`**: it asks the metadata server for the attached service account's email address, so rows name the service account, not a person.
 - **`none`**: no address.
 
-The address fills `labels.user_email` only when the record has no `user.email` of its own (Claude Code sets one for users signed in to an Anthropic account). It is never saved to disk with unsent rows, so rows a later session sends on an earlier one's behalf go without it rather than with the wrong account's.
+`labels.user_email` always names an account someone signed in to. For users signed in to an Anthropic account, Claude Code sets `user.email` itself, and that stays. Otherwise (on Vertex AI, for example) the mod fills it with the credentials' address. A `user.email` or `user_email` key in `OTEL_RESOURCE_ATTRIBUTES` never fills it, since any developer can set that variable to any address: it goes into `labels.extra_labels` under its own key. The credentials' address is never saved to disk with unsent rows, so rows a later session sends on an earlier one's behalf go without it rather than with the wrong account's.
 
 ## What a row contains
 
@@ -244,7 +254,33 @@ SELECT SAFE_CAST(STRING(labels.extra_labels.history_entries_pruned) AS INT64) AS
 FROM `your-project-id.claude_code_telemetry.retention_sweep`
 ```
 
-Field access (`labels.extra_labels.team_id`) returns JSON; `STRING(...)` or `JSON_VALUE(labels.extra_labels, '$.team_id')` gives text. Keys are the field names a sink would use (`team.id` becomes `team_id`). Tables made by an earlier `setup.sh` may have `extra_labels` as a STRING, which BigQuery can't convert; read those with `JSON_VALUE`. To give an attribute its own field, add it to `EXTRA_LABELS` and run `setup.sh` again. A kind of event with no table at all is dropped, and the mod says so in the transcript; add it to `event-labels.json` and run `setup.sh`.
+Field access (`labels.extra_labels.team_id`) returns JSON; `STRING(...)` or `JSON_VALUE(labels.extra_labels, '$.team_id')` gives text. Keys are the field names a sink would use (`team.id` becomes `team_id`). When two attributes would get the same field (`team.id` and `team_id`), one that Claude Code set wins over one from `OTEL_RESOURCE_ATTRIBUTES`, or else the first; the other keeps its own key here. Tables made by an earlier `setup.sh` may have `extra_labels` as a STRING, which BigQuery can't convert; read those with `JSON_VALUE`. To give an attribute its own field, add it to `EXTRA_LABELS` and run `setup.sh` again; rows written before then keep it in `extra_labels`.
+
+### Events with no table
+
+[`event-labels.json`](./event-labels.json) lists the kinds of events Claude Code documents, and `setup.sh` makes a table for each. A newer Claude Code can send kinds that aren't listed. The mod writes those rows to `other_events`, which has the fields every event has: `logName` ends with the event's name, and its other attributes are in `labels.extra_labels`. The mod notes this in the debug log only, so look in the table to see what arrived:
+
+```sql
+SELECT REGEXP_EXTRACT(logName, r'/logs/([^/]+)$') AS event, COUNT(*) AS n, MAX(timestamp) AS last_seen
+FROM `your-project-id.claude_code_telemetry.other_events`
+WHERE timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+GROUP BY event;
+```
+
+To give such an event its own table, add it and its attributes to `event-labels.json` and run `setup.sh` again. Its rows go to the new table once the mod looks again, within 10 minutes; rows already in `other_events` stay there. Tables made by an earlier `setup.sh` have no `other_events`: until `setup.sh` is run again, rows of an event with no table are dropped, and the mod says so in the transcript.
+
+### The deduplicated views
+
+The tables can hold a row twice (see [Limitations](#limitations)). For each table, `setup.sh` makes a view of the same name in `claude_code_telemetry_deduped` that keeps one row per `insertId` and `timestamp`. Query those views when counts matter:
+
+```sql
+SELECT labels.model, COUNT(*) AS requests
+FROM `your-project-id.claude_code_telemetry_deduped.api_request`
+WHERE timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)
+GROUP BY 1;
+```
+
+A filter on `timestamp` limits the days BigQuery reads, as it does on the table. Wildcard queries (`claude_code_telemetry_deduped.*`) don't work on views; run those on the tables' dataset.
 
 ### The spend views
 
@@ -258,26 +294,27 @@ These tables weren't compared with ones a real sink wrote; they follow Google's 
 
 - **The resource is always `generic_task`.** A Telemetry API export picks the type from the resource attributes by [Google's table](https://docs.cloud.google.com/stackdriver/docs/reference/telemetry/otlp-attribute-to-logging-resource) (`generic_node`, `gce_instance`, `k8s_container`, …) and can take `project_id` from them. The mod always names the project from its options and the machine by hostname.
 - **Tables and label fields exist before any row.** A sink creates a table on its first entry and adds a field when a label first appears; `setup.sh` creates them all up front, so most label fields are empty.
-- **Only attributes in `event-labels.json` get their own field.** A sink adds a field for every label it sees, so an attribute missing from that list, such as `history_entries_pruned` on `retention_sweep`, becomes `labels.history_entries_pruned`. The mod can't add fields (writers may only insert rows), so such an attribute goes into [`labels.extra_labels`](#labels-with-no-field). A sink query that reads one, like `SAFE_CAST(labels.history_entries_pruned AS INT64)`, fails here; read it as `SAFE_CAST(STRING(labels.extra_labels.history_entries_pruned) AS INT64)`, or give it its own field with `EXTRA_LABELS=history_entries_pruned` and a `setup.sh` rerun. Rows written before the rerun keep the value in `extra_labels`.
+- **Only attributes in `event-labels.json` get their own field.** A sink adds a field for every label it sees; the mod can't add fields, so other attributes go into [`labels.extra_labels`](#labels-with-no-field), and a sink query that reads one, like `labels.history_entries_pruned`, needs rewriting.
+- **Events with no table go to [`other_events`](#events-with-no-table)**, where a sink would create a table for the new log.
+- **[`labels.user_email`](#the-email-address) never comes from `OTEL_RESOURCE_ATTRIBUTES`**, where a sink keeps whatever `user.email` the record carries.
 - **`insertId` and `receiveTimestamp`** come from the mod, not from Cloud Logging.
 
 ## Limitations
 
 - **Events only.** Claude Code's metrics (token, cost, session and lines-of-code counters) and traces don't pass through mods. Token and dollar totals can be rebuilt from `api_request` events, as the views do.
 - **`cost_usd` is an estimate** Claude Code computes from list prices. It won't match a Google Cloud bill that includes discounts or commitments.
-- **`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` stops the mod.** While it is set, Claude Code refuses every network request a mod makes. The mod logs that it isn't sending. An organization policy that turns off web fetch has the same effect; `DISABLE_TELEMETRY` doesn't.
+- **An organization policy that doesn't allow web fetch stops the mod.** Claude Code then refuses every network request a mod makes, and the mod logs that it isn't sending. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` did the same before Claude Code 2.1.288; `CLAUDE_CODE_DISABLE_WEB_FETCH` and `DISABLE_TELEMETRY` don't.
 - **Records at the edges of a session can be missed.** Records logged before mods load never reach the mod (`plugin_loaded` sometimes does, sometimes doesn't). At exit the mod saves unsent rows and tries to send them for up to a second; whatever doesn't go out is sent by the next session on that machine. A session killed outright, or a restart of the mod, loses the rows queued since the last send (every 5 seconds by default).
-- **Duplicates are possible.** A send that BigQuery stored but whose answer was lost is sent again, and two sessions can pick up the same saved rows. BigQuery drops repeats of an `insertId` on a best-effort basis only, so the spend views keep one row per `insertId` and `timestamp`; do the same in your own queries when exact counts matter.
-- **Some rows are dropped.** A lasting error, such as a missing table or a malformed row, drops the batch and logs the reason, rather than retrying forever. So does a record over 256 KiB, Cloud Logging's limit for one entry. Server errors, rate limits, rejected credentials, missing permissions (403) and network failures are retried with backoff, and up to 16 MiB of rows wait in memory meanwhile.
+- **Duplicates are possible.** A send that BigQuery stored but whose answer was lost is sent again, and two sessions can pick up the same saved rows. BigQuery drops a repeated `insertId` on a best-effort basis only, for about a minute, while the mod's wait between retries grows to as much as 5 minutes when BigQuery can't be reached. Query the [deduplicated views](#the-deduplicated-views), or keep one row per `insertId` and `timestamp` in your own queries, as the spend views do.
+- **Some rows are dropped.** A lasting error, such as a malformed row, or a missing table when there is no `other_events` table either, drops the batch and logs the reason, rather than retrying forever. So does a record over 256 KiB, Cloud Logging's limit for one entry. Server errors, rate limits, rejected credentials, missing permissions (403) and network failures are retried with backoff, and up to 16 MiB of rows wait in memory meanwhile.
 - **Prompts and other content reach the tables if the OpenTelemetry switches say so.** `OTEL_LOG_USER_PROMPTS`, `OTEL_LOG_ASSISTANT_RESPONSES`, `OTEL_LOG_TOOL_DETAILS` and `OTEL_LOG_RAW_API_BODIES` add content to the records ([monitoring docs](https://code.claude.com/docs/en/monitoring-usage)), and the mod copies records as they are, even with no exporter configured. Leave them unset unless the tables should hold that content. Each value is cut at 64 KiB, as in Cloud Logging. A mod that redacts records must [run before this one](https://code.claude.com/docs/en/plugins/mods/events#the-order-mods-run-in).
 - **Not tested in the Desktop app.** Claude Code's types mark `$.process` (which runs `gcloud` and `hostname`) as CLI only, so the `adc` and `gcloud` auth modes may not work there, and the hostname would come from the environment, if at all.
 
 ## Security notes
 
-- Mods aren't sandboxed. This one and the commands it runs have the user's permissions. `claude plugin validate ./01-quickstart/bigquery-mod` lists every call it makes and every environment variable it reads. The calls that reach outside Claude Code are `$.http.fetch` (to BigQuery, to Google's `tokeninfo` endpoint for the email address, and to the metadata server with `auth: metadata`) and `$.process.run` (only `gcloud`, and `hostname` unless `hostname_task_id` is off or `OTEL_RESOURCE_ATTRIBUTES` sets `service.instance.id`).
+- Mods aren't sandboxed. This one and the commands it runs have the user's permissions (see [what it calls](#roll-it-out-with-managed-settings)).
 - The mod sends its access token only to `https://*.googleapis.com`. Any other `api_base` requires `auth: none`; with any other `auth`, the mod refuses to start, and it also checks each request's address before attaching the token.
 - It never refuses or changes a record, so it can't hide anything from another telemetry pipeline. With `on_auth_failure: block` it refuses prompts, never records, while credentials fail.
-- By default each row carries the machine's hostname as `resource.labels.task_id` (see [The resource](#the-resource)) and the developer's email address as `labels.user_email` (see [The email address](#the-email-address)). Turn off `hostname_task_id` and `email_from_credentials` to leave them out.
 
 ## Tests
 
@@ -286,7 +323,7 @@ cd 01-quickstart/bigquery-mod
 claude plugin test
 ```
 
-The tests in [`tests/`](./tests/) check the row format (including table names, label field names and the resource), leaving out labels a table has no field for, batching per table, the handling of each kind of BigQuery answer, token refresh, and saving and resending rows at exit, with Claude Code's answers stubbed. They need no Google Cloud project or network, and need Claude Code 2.1.287 or later.
+The tests in [`tests/`](./tests/) check the row format (including table names, label field names and the resource), leaving out labels a table has no field for, sending events with no table to `other_events`, batching per table, the handling of each kind of BigQuery answer, token refresh, and saving and resending rows at exit, with Claude Code's answers stubbed. They need no Google Cloud project or network, and need Claude Code 2.1.287 or later.
 
 ## Files
 
@@ -298,5 +335,5 @@ The tests in [`tests/`](./tests/) check the row format (including table names, l
 | [`schema.json`](./schema.json) | The columns every table has; `setup.sh` adds the label fields |
 | [`event-labels.json`](./event-labels.json) | The attributes that get their own field: those Claude Code's documentation lists for every event and for each kind of event, plus a few it's known to send |
 | [`setup.sh`](./setup.sh) | Creates the datasets, tables and views, and adds missing label fields |
-| [`sql/`](./sql/) | The `daily_spend` and `spend_by_model` views |
+| [`sql/`](./sql/) | The `daily_spend` and `spend_by_model` views, and the deduplicated view `setup.sh` makes of each table |
 | [`tests/`](./tests/) | `claude plugin test` tests |

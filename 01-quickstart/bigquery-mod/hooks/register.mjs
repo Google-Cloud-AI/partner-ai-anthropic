@@ -68,6 +68,8 @@ const SPOOL_PREFIX = 'unsent:'
 // other sessions leave saved rows alone until they are this old. A running
 // session waiting to retry can own older ones; taking those can duplicate rows.
 const SPOOL_MIN_AGE_MS = 30_000
+// The table, made by setup.sh, for events that have no table of their own.
+const OTHER_EVENTS = 'other_events'
 
 let config
 const state = {
@@ -245,15 +247,9 @@ function contextOf($) {
 async function loadContext($) {
   const resourceAttributes = await $.env.get('OTEL_RESOURCE_ATTRIBUTES')
   const serviceName = await $.env.get('OTEL_SERVICE_NAME')
-  const nonessentialOff = await $.env.get('CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC')
-
-  if (nonessentialOff && !state.disabled) {
-    await disable(
-      $,
-      'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC is set, which makes Claude Code refuse every ' +
-        "network request from a mod. Unset it to send rows (DISABLE_TELEMETRY doesn't block the mod).",
-    )
-  }
+  // CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC no longer stops a mod's requests
+  // (Claude Code 2.1.288 and later); where Claude Code still refuses them,
+  // sendOrFail sees the refusal and the mod stops then.
   const attributes = resourceAttributesOf(resourceAttributes, serviceName)
   const hostname = config.hostnameTaskId && !state.disabled && wantsHostname(attributes) ? await hostnameOf($) : ''
   return sessionFieldsOf(attributes, config.project, hostname)
@@ -429,17 +425,33 @@ async function report($, outcome, waitMs) {
 }
 
 // Sends a batch, all for one table, after removing the labels that table
-// has no column for.
+// has no column for. A batch whose table doesn't exist goes to other_events.
 async function send($, batch) {
-  const table = batch[0].table
-  const fields = await fieldsOf($, table)
+  let table = batch[0].table
+  let fields = await fieldsOf($, table)
   if (fields === 'missing') {
-    return {
-      sent: [], retry: [], dropped: batch, retryLater: false, missingTable: true,
-      reason: 'the table ' + config.project + ':' + config.dataset + '.' + table + " doesn't exist. Check the " +
-        'project, dataset and table_prefix options. If they are right, this is a kind of event setup.sh made no ' +
-        'table for: add it to event-labels.json and run setup.sh again.',
+    const other = tableNameOf(OTHER_EVENTS, config.tablePrefix)
+    const otherFields = table === other ? 'missing' : await fieldsOf($, other)
+    if (otherFields === 'missing') {
+      return {
+        sent: [], retry: [], dropped: batch, retryLater: false, missingTable: true,
+        reason: 'the table ' + config.project + ':' + config.dataset + '.' + table + " doesn't exist. Check the " +
+          'project, dataset and table_prefix options. If they are right, this is a kind of event setup.sh made no ' +
+          'table for, and there is no ' + other + ' table to hold it: run setup.sh again.',
+      }
     }
+    // Debug log only: no row is lost, and other_events shows which events need a table.
+    if (!state.warned.has('other:' + table)) {
+      state.warned.add('other:' + table)
+      console.warn(
+        LOG_PREFIX + 'the table ' + table + " doesn't exist, so its rows go to " + other +
+          '. To give it a table, add the event to event-labels.json and run setup.sh again.',
+      )
+    }
+    // Retried rows then go straight to other_events.
+    for (const item of batch) item.table = other
+    table = other
+    fields = otherFields
   }
   if (fields) {
     for (const item of batch) {
@@ -724,7 +736,8 @@ async function writeSpool($) {
 // they fit in this session's 1 MiB: queues them and saves them under this
 // process's key, then removes the old keys; if that save fails, it removes
 // each old key once its rows are sent. A key can belong to a running session
-// waiting to retry; taking it can duplicate rows, which the spend views remove.
+// waiting to retry; taking it can duplicate rows, which the views setup.sh
+// makes remove.
 async function replaySpool($) {
   try {
     const now = await $.clock.now()
