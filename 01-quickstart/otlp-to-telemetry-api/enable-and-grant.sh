@@ -81,7 +81,7 @@ fi
 # TWO LISTS, because the sender is not always the developer. On a laptop
 # otel-headers-helper.sh falls through to `gcloud auth print-access-token` and
 # the developer's own credential is used, so DEVELOPERS is what matters. On GCE
-# and Cloud Workstations the metadata server answers first and the MACHINE's
+# and Google Cloud Workstations the metadata server answers first and the MACHINE's
 # service account is used instead — even for a developer signed in with gcloud.
 # Granting only DEVELOPERS leaves every export from GCP compute rejected.
 # Attribution is unaffected either way: user.email is resolved per developer by

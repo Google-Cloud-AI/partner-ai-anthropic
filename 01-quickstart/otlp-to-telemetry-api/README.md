@@ -11,21 +11,9 @@ Claude Code ──OTLP/HTTP──> telemetry.googleapis.com
                                            └─> Cloud Monitoring ─> dashboards
 ```
 
-One endpoint and one credential carry both signals.
-
-## How this compares with the other quickstarts
-
-| | This quickstart | [`otlp-to-collector/`](../otlp-to-collector/) | [`bigquery-mod/`](../bigquery-mod/) |
-|---|---|---|---|
-| What runs | Nothing. Claude Code calls the API. | A collector on Cloud Run | A plugin on each machine |
-| Metrics and dashboards | Yes | Yes | No |
-| Developer permissions | Write telemetry to the project | Invoke one Cloud Run service | Write to BigQuery |
-| Where the email comes from | `OTEL_RESOURCE_ATTRIBUTES` | `OTEL_RESOURCE_ATTRIBUTES` | The signed-in credential |
-
-Pick this one when you want metrics and dashboards without running
-infrastructure. Pick the collector when you need a single egress point, or when
-developers should not hold telemetry permissions. Pick the mod when you only
-want BigQuery rows and want the email taken from the credential.
+One endpoint and one credential carry both signals. If you need a collector in
+the path, for a single egress point or so that developers hold no telemetry
+permissions of their own, see [`otlp-to-collector/`](../otlp-to-collector/).
 
 ## Requirements
 
@@ -57,6 +45,10 @@ Two routes. Use the first to try it, the second to deploy it.
 This merges the right keys into `~/.claude/settings.json`, backing the file up
 first. Restart Claude Code afterwards. Run it without `--merge` to print the
 file instead of writing it.
+
+You are not asked to type your email. The script reads it from your `gcloud`
+credential, asking Google's `tokeninfo` endpoint which address the token
+belongs to. Pass one as an argument to override, and it says so.
 
 ### Roll it out with managed settings
 
@@ -118,13 +110,13 @@ Under Vertex AI there is no Anthropic sign-in, so Claude Code emits an anonymous
 something has to supply it, and it differs per person. It is the one setting the
 fleet-wide file above cannot carry.
 
-Three ways to deliver it, all of which still require nothing of the developer:
+Three ways to deliver it, none of which ask the developer to do anything:
 
 | Where developers work | How to supply the email |
 |---|---|
 | Laptops under MDM | Substitute the assigned user's address into that machine's `managed-settings.json`, adding an `OTEL_RESOURCE_ATTRIBUTES` key |
 | Laptops, if you would rather keep the managed file identical everywhere | Write `~/.claude/settings.json` per user with only `OTEL_RESOURCE_ATTRIBUTES` in it |
-| Cloud Workstations | The image is shared, so resolve it at first login from a startup script that runs `./print-settings.sh --merge` |
+| Google Cloud Workstations | The image is shared, so have the workstation's startup script run `./print-settings.sh --merge` at first boot |
 
 The value is one string:
 
@@ -132,19 +124,19 @@ The value is one string:
 "OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=PROJECT,location=REGION,service.instance.id=HOSTNAME,user.email=person@example.com"
 ```
 
-`location` must be a real region; `global` is rejected. `service.instance.id`
-becomes `resource.labels.task_id`, which is the `host` column in the queries.
+It has to be set as a whole, so the email cannot be split out and layered on top
+of a shared value. Whatever you include goes in the per-user string. What each
+key does:
 
-When a developer runs `print-settings.sh` themselves, it fills the email in from
-their `gcloud` credential rather than asking them to type it, by checking
-Google's `tokeninfo` endpoint for the address the token belongs to. Pass an
-address as an argument to override, and it warns.
+| Key | Becomes | Needed? |
+|---|---|---|
+| `user.email` | `labels.user_email` | Yes. The only field naming a person, and what every per-developer query groups by. |
+| `location` | `resource.labels.location` | Yes, and it must be a real region. `global` is rejected. |
+| `gcp.project_id` | `resource.labels.project_id` | Yes. |
+| `service.instance.id` | `resource.labels.task_id` | Optional. Drop it and the `host` column in `01-spend.sql` and `05-sessions.sql` is empty; nothing else changes. |
 
-Treat the result as an accuracy control, not a security boundary. Anyone who can
-edit their own `settings.json` can change it afterwards. If you need an address
-that developers cannot set, use [`bigquery-mod/`](../bigquery-mod/), which
-ignores `OTEL_RESOURCE_ATTRIBUTES` for this and reads the credential every
-session.
+The Log Router sink selects on `resource.type` and `resource.labels.job`, both
+of which Claude Code sets itself, so none of these affect whether rows arrive.
 
 ## 3. Check that rows arrive
 
@@ -157,7 +149,7 @@ queries work.
 `otel-headers-helper.sh` mints a short-lived access token for each export. It
 tries two sources, in order:
 
-1. **The metadata server**, on GCE and Cloud Workstations. The machine's service
+1. **The metadata server**, on GCE and Google Cloud Workstations. The machine's service
    account, no keys, nothing to distribute.
 2. **`gcloud auth print-access-token`**, on laptops. The developer's own
    credential, after `gcloud auth login`.
@@ -198,7 +190,7 @@ enforces both `iam.disableServiceAccountKeyCreation` and
 ### Authentication and attribution are separate
 
 The credential that carries an export has nothing to do with the email on the
-rows. On a Cloud Workstation the machine's service account sends the data while
+rows. On a Google Cloud Workstation the machine's service account sends the data while
 the rows still name the developer. A row's `user_email` tells you nothing about
 which token sent it, and reviewers get this wrong often enough to be worth
 stating twice.
@@ -211,7 +203,7 @@ usual reason a new deployment writes nothing:
 | Where Claude Code runs | Who authenticates | `config.env` list |
 |---|---|---|
 | Laptop, off GCP | the developer | `DEVELOPERS` |
-| GCE VM, Cloud Workstation | the machine's service account | `MACHINE_MEMBERS` |
+| GCE VM, Google Cloud Workstation | the machine's service account | `MACHINE_MEMBERS` |
 
 `enable-and-grant.sh` grants both lists `roles/telemetry.writer` on the
 destination project and `roles/serviceusage.serviceUsageConsumer` on the quota
@@ -331,6 +323,14 @@ your Google Cloud bill is authoritative over either.
 **Dynamic headers need HTTP.** `otelHeadersHelper` works with `http/protobuf`
 and `http/json` only. Under `grpc`, Claude Code uses static headers, the token
 is never refreshed, and exports fail about an hour in.
+
+**`user.email` is an accuracy control, not a security boundary.** It is a string
+in `OTEL_RESOURCE_ATTRIBUTES`, so anyone who can edit their own
+`settings.json` can change it, and managed settings cannot lock it without
+also fixing it to one value for everyone. It is good enough to attribute spend,
+not to prove who did something. For an address developers cannot set, use
+[`bigquery-mod/`](../bigquery-mod/), which ignores `OTEL_RESOURCE_ATTRIBUTES`
+for this and reads the credential each session.
 
 ## Files
 

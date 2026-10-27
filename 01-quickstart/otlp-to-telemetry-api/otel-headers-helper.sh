@@ -59,13 +59,13 @@
 # instead, which was verified working against telemetry.googleapis.com.
 #
 # Two ways to mint the token, tried in order:
-#   1. Metadata server  — on GCP compute (Cloud Workstations, GCE VMs) the
+#   1. Metadata server  — on GCP compute (Google Cloud Workstations, GCE VMs) the
 #      attached SA mints the token, no key files. Not available off-GCP.
 #   2. gcloud           — on a laptop, `gcloud auth print-access-token` uses the
 #      developer's own credentials. Requires `gcloud auth login`.
 #
 # WHO IS ACTUALLY AUTHENTICATED, which is easy to get wrong:
-#   Metadata wins whenever it answers, so on GCE and Cloud Workstations the
+#   Metadata wins whenever it answers, so on GCE and Google Cloud Workstations the
 #   export is authenticated by the MACHINE's service account — even if the
 #   developer is signed in with gcloud on that same box. Only off GCP does the
 #   developer's own credential get used. Both principals therefore need
