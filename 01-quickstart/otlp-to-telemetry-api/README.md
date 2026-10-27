@@ -121,22 +121,17 @@ Three ways to deliver it, none of which ask the developer to do anything:
 The value is one string:
 
 ```json
-"OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=PROJECT,location=REGION,service.instance.id=HOSTNAME,user.email=person@example.com"
+"OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=PROJECT,location=LOCATION,service.instance.id=HOSTNAME,user.email=person@example.com"
 ```
 
 It has to be set as a whole, so the email cannot be split out and layered on top
-of a shared value. Whatever you include goes in the per-user string. What each
-key does:
+of a shared value. Whatever you include goes in the per-user string.
 
-| Key | Becomes | Needed? |
-|---|---|---|
-| `user.email` | `labels.user_email` | Yes. The only field naming a person, and what every per-developer query groups by. |
-| `location` | `resource.labels.location` | Yes, and it must be a real region. `global` is rejected. |
-| `gcp.project_id` | `resource.labels.project_id` | Yes. |
-| `service.instance.id` | `resource.labels.task_id` | Optional. Drop it and the `host` column in `01-spend.sql` and `05-sessions.sql` is empty; nothing else changes. |
-
-The Log Router sink selects on `resource.type` and `resource.labels.job`, both
-of which Claude Code sets itself, so none of these affect whether rows arrive.
+`location` is a label saying where the workload runs. It takes any valid Google
+Cloud location, a region or a zone, but not `global`, which the endpoint
+rejects. On GCP, `print-settings.sh` reads the machine's zone. On a laptop
+there is no true answer, so it falls back to the region in `config.env`: valid,
+and geographically meaningless.
 
 ## 3. Check that rows arrive
 
