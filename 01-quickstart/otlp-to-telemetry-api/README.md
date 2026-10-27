@@ -52,14 +52,24 @@ belongs to. Pass one as an argument to override, and it says so.
 
 ### Roll it out with managed settings
 
-Developers do not need to run anything. An administrator deploys one file that
-every machine shares:
+Developers do not need to run anything. Generate the configuration once:
 
 ```bash
-./print-settings.sh --managed
+./print-settings.sh --managed > managed-settings.json
 ```
 
-Save the output as `managed-settings.json` in the system directory:
+Then put **three** files on each machine, with whatever already deploys files to
+your fleet:
+
+| File | Where it goes | Why |
+|---|---|---|
+| `managed-settings.json` | the system directory for the OS, below | The configuration |
+| `otel-headers-helper.sh` | wherever `otelHeadersHelper` points, for example `/opt/claude-code/` | Mints an access token for every export |
+| `config.env` | **beside the helper** | The helper reads `QUOTA_PROJECT` from it and exits if it is missing |
+
+`setup.sh` writes `config.env` in step 1. Ship that same file.
+
+System directory per OS:
 
 | OS | Path |
 |---|---|
@@ -67,7 +77,8 @@ Save the output as `managed-settings.json` in the system directory:
 | Linux and WSL | `/etc/claude-code/managed-settings.json` |
 | Windows | `C:\Program Files\ClaudeCode\managed-settings.json` |
 
-It looks like this:
+The generated file looks like this. Change `otelHeadersHelper` to the path the
+helper will have **on developer machines**, not the one it has on yours:
 
 ```json
 {
@@ -86,10 +97,6 @@ It looks like this:
   "otelHeadersHelper": "/opt/claude-code/otel-headers-helper.sh"
 }
 ```
-
-Ship `otel-headers-helper.sh` and its `config.env` to the path named in
-`otelHeadersHelper` on each machine, with whatever already places files on your
-fleet. The helper reads `config.env` from its own directory.
 
 Things to know:
 
@@ -110,13 +117,16 @@ Under Vertex AI there is no Anthropic sign-in, so Claude Code emits an anonymous
 something has to supply it, and it differs per person. It is the one setting the
 fleet-wide file above cannot carry.
 
-Three ways to deliver it, none of which ask the developer to do anything:
+Two ways to deliver it, neither of which asks the developer to do anything:
 
 | Where developers work | How to supply the email |
 |---|---|
-| Laptops under MDM | Substitute the assigned user's address into that machine's `managed-settings.json`, adding an `OTEL_RESOURCE_ATTRIBUTES` key |
-| Laptops, if you would rather keep the managed file identical everywhere | Write `~/.claude/settings.json` per user with only `OTEL_RESOURCE_ATTRIBUTES` in it |
-| Google Cloud Workstations | The image is shared, so have the workstation's startup script run `./print-settings.sh --merge` at first boot |
+| **Laptops** | Add `OTEL_RESOURCE_ATTRIBUTES` to that machine's `managed-settings.json`, with your MDM substituting the assigned user's address. The managed file then differs per machine. |
+| **Google Cloud Workstations** | The image is shared, so nothing can be baked in. Have the workstation's startup script run `./print-settings.sh --merge` at first boot. |
+
+Prefer the first wherever you can. Because managed settings outrank every other
+level, an address placed there is one the developer cannot change. The
+Workstations route writes `~/.claude/settings.json`, which they can.
 
 The value is one string:
 
@@ -319,13 +329,14 @@ your Google Cloud bill is authoritative over either.
 and `http/json` only. Under `grpc`, Claude Code uses static headers, the token
 is never refreshed, and exports fail about an hour in.
 
-**`user.email` is an accuracy control, not a security boundary.** It is a string
-in `OTEL_RESOURCE_ATTRIBUTES`, so anyone who can edit their own
-`settings.json` can change it, and managed settings cannot lock it without
-also fixing it to one value for everyone. It is good enough to attribute spend,
-not to prove who did something. For an address developers cannot set, use
-[`bigquery-mod/`](../bigquery-mod/), which ignores `OTEL_RESOURCE_ATTRIBUTES`
-for this and reads the credential each session.
+**How much `user.email` can be trusted depends on where you put it.** In a
+machine's `managed-settings.json` it outranks every other level, so the
+developer cannot change it. Anywhere else, including the
+`~/.claude/settings.json` that `print-settings.sh --merge` writes, it is a
+string they can edit. Either way it is good enough to attribute spend, and
+neither proves who did something. For an address no developer can set at all,
+use [`bigquery-mod/`](../bigquery-mod/), which ignores
+`OTEL_RESOURCE_ATTRIBUTES` for this and reads the credential each session.
 
 ## Files
 
