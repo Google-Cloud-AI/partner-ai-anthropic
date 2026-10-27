@@ -17,7 +17,7 @@
 # to telemetry.googleapis.com — both logs and metrics.
 #
 # Usage:
-#   ./print-settings.sh [email] [--merge]
+#   ./print-settings.sh [email] [--merge | --managed]
 #
 #   (no args)  Derive your identity from your gcloud credential and print the
 #              complete, correctly-shaped settings.json to stdout.
@@ -27,6 +27,9 @@
 #              asserted rather than verified.
 #   --merge    Merge the keys into ~/.claude/settings.json in place (requires jq;
 #              backs the file up first). Foolproof — puts each key where it goes.
+#   --managed  Print the fleet-wide managed-settings.json for an administrator
+#              to deploy: everything except user.email, which differs per
+#              developer. Changes nothing on this machine.
 #
 # TWO SIGNALS, TWO BACKENDS. telemetry.googleapis.com fans out by signal type:
 # log records reach Cloud Logging (and from there the sink and BigQuery), metrics
@@ -59,17 +62,63 @@ if [[ -z "${PROJECT:-}" ]]; then
   exit 1
 fi
 
-# Parse args: an optional email override (anything not starting with --) and
-# --merge.
+# Parse args: an optional email override (anything not starting with --), and
+# one of --merge / --managed.
 EMAIL_ARG=""
 MERGE=0
+MANAGED=0
 for arg in "$@"; do
   case "${arg}" in
-    --merge) MERGE=1 ;;
-    --*)     echo "print-settings: unknown flag ${arg}" >&2; exit 1 ;;
-    *)       EMAIL_ARG="${arg}" ;;
+    --merge)   MERGE=1 ;;
+    --managed) MANAGED=1 ;;
+    --*)       echo "print-settings: unknown flag ${arg}" >&2; exit 1 ;;
+    *)         EMAIL_ARG="${arg}" ;;
   esac
 done
+if [[ "${MERGE}" -eq 1 && "${MANAGED}" -eq 1 ]]; then
+  echo "print-settings: --merge and --managed are mutually exclusive." >&2
+  echo "  --managed prints a file for an administrator to deploy; it does not" >&2
+  echo "  touch this machine's settings." >&2
+  exit 1
+fi
+
+# ---- --managed: the fleet-wide half, for an administrator -------------------
+# Everything here is identical for every developer, so an administrator can
+# deploy one copy to the whole fleet. Deliberately WITHOUT
+# OTEL_RESOURCE_ATTRIBUTES: that carries user.email, which differs per person
+# and is supplied separately (see "Roll it out" in README.md). Claude Code
+# merges env per key across settings levels, so omitting it here leaves a
+# per-user value in place rather than blanking it.
+if [[ "${MANAGED}" -eq 1 ]]; then
+  cat >&2 <<NOTES
+# Fleet-wide managed settings. Deploy to:
+#   macOS        /Library/Application Support/ClaudeCode/managed-settings.json
+#   Linux / WSL  /etc/claude-code/managed-settings.json
+#   Windows      C:\\Program Files\\ClaudeCode\\managed-settings.json
+#
+# Every developer needs user.email on top of this; see "Roll it out" in
+# README.md. otel-headers-helper.sh must exist at the path below on each
+# machine, so ship it with this file.
+NOTES
+  cat <<EOF
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "${ENDPOINT}",
+    "OTEL_METRIC_EXPORT_INTERVAL": "60000",
+    "OTEL_LOGS_EXPORT_INTERVAL": "5000",
+    "CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS": "180000",
+    "OTEL_METRICS_INCLUDE_RESOURCE_ATTRIBUTES": "true",
+    "OTEL_METRICS_INCLUDE_VERSION": "true"
+  },
+  "otelHeadersHelper": "${HELPER}"
+}
+EOF
+  exit 0
+fi
 
 # ---- Resolve user.email: verified, not asserted -----------------------------
 # user.email is what every per-developer query groups by, and nothing
