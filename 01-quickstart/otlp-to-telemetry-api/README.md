@@ -111,7 +111,7 @@ the only one that takes effect from the user file.
 The value is one string of literal text:
 
 ```json
-"OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=acme-telemetry,location=us-central1,service.instance.id=sams-laptop,user.email=sam@acme.com"
+"OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=your_project_id,location=us-central1,service.instance.id=sams-laptop,user.email=sam@yourcompany.com"
 ```
 
 Claude Code does not expand anything in it. Write real values, not shell
