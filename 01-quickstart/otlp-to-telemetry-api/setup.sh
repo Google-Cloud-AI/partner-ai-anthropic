@@ -54,7 +54,7 @@ QUOTA_PROJECT="${QUOTA_PROJECT:-${PROJECT}}"
 ask QUOTA_PROJECT     "Quota project (x-goog-user-project; usually the same)"
 ask DEVELOPERS        "Who may send telemetry (prefer domain:yourco.com or group:team@yourco.com, so you never list individuals)"
 ask MACHINE_MEMBERS   "SAs of GCE/Workstation machines running Claude Code (serviceAccount:...; on GCP the MACHINE authenticates, not the developer)"
-ask FALLBACK_LOCATION "Region to report when off GCP (must be a real region; 'global' is rejected)"
+ask FALLBACK_LOCATION "Location to report when off GCP (any Google Cloud region or zone, not 'global'; ignored on GCP)"
 
 echo
 echo "  Logs are routed to real BigQuery tables by a Log Router sink."
