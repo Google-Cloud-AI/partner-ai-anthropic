@@ -62,27 +62,8 @@ anything. Generate the configuration once:
 ./print-settings.sh --managed > managed-settings.json
 ```
 
-Then put **three** files on each machine, with whatever already deploys files to
-your fleet:
-
-| File | Where it goes | Why |
-|---|---|---|
-| `managed-settings.json` | the system directory for the OS, below | The configuration |
-| `otel-headers-helper.sh` | wherever `otelHeadersHelper` points, for example `/opt/claude-code/` | Mints an access token for every export |
-| `config.env` | **beside the helper** | The helper reads `QUOTA_PROJECT` from it and exits if it is missing |
-
-`setup.sh` writes `config.env` in step 1. Ship that same file.
-
-System directory per OS:
-
-| OS | Path |
-|---|---|
-| macOS | `/Library/Application Support/ClaudeCode/managed-settings.json` |
-| Linux and WSL | `/etc/claude-code/managed-settings.json` |
-| Windows | `C:\Program Files\ClaudeCode\managed-settings.json` |
-
-The generated file looks like this. Change `otelHeadersHelper` to the path the
-helper will have **on developer machines**, not the one it has on yours:
+Change `otelHeadersHelper` to the path the helper will have **on developer
+machines**, not the one it has on yours:
 
 ```json
 {
@@ -102,12 +83,8 @@ helper will have **on developer machines**, not the one it has on yours:
 }
 ```
 
-Things to know:
-
-- **Managed settings win.** No user, project, local or `--settings` value
-  overrides them, so developers cannot redirect the export somewhere else.
-- **The helper path must exist before Claude Code starts.** If it is missing,
-  exports fail and Claude Code reports it in `/status`.
+That half is the same for everyone. One key is still missing, and it is the one
+that differs per person.
 
 ### The email address
 
@@ -146,6 +123,31 @@ Cloud location, a region or a zone, but not `global`, which the endpoint
 rejects. On GCP, `print-settings.sh` reads the machine's zone. On a laptop
 there is no true answer, so it falls back to the region in `config.env`: valid,
 and geographically meaningless.
+
+### Put the files on each machine
+
+Three files, not one, with whatever already deploys files to your fleet:
+
+| File | Where it goes | Why |
+|---|---|---|
+| `managed-settings.json` | the system directory for the OS, below | The configuration, including the address above |
+| `otel-headers-helper.sh` | wherever `otelHeadersHelper` points, for example `/opt/claude-code/` | Mints an access token for every export |
+| `config.env` | **beside the helper** | The helper reads `QUOTA_PROJECT` from it and exits if it is missing |
+
+`setup.sh` writes `config.env` in step 1. Ship that same file.
+
+| OS | System directory |
+|---|---|
+| macOS | `/Library/Application Support/ClaudeCode/managed-settings.json` |
+| Linux and WSL | `/etc/claude-code/managed-settings.json` |
+| Windows | `C:\Program Files\ClaudeCode\managed-settings.json` |
+
+Things to know:
+
+- **Managed settings win.** No user, project, local or `--settings` value
+  overrides them, so developers cannot redirect the export somewhere else.
+- **The helper path must exist before Claude Code starts.** If it is missing,
+  exports fail and Claude Code reports it in `/status`.
 
 ## 3. Check that rows arrive
 
