@@ -210,6 +210,11 @@ usual reason a new deployment writes nothing:
 | Laptop, off GCP | the developer | `DEVELOPERS` |
 | GCE VM, Google Cloud Workstation | the machine's service account | `MACHINE_MEMBERS` |
 
+`otel-headers-helper.sh` asks the metadata server first, and on GCP compute it
+always answers, so the export is authenticated by the machine even when the
+developer is signed in with `gcloud` on that same box. Leave `MACHINE_MEMBERS`
+empty if everyone works on laptops.
+
 `enable-and-grant.sh` grants both lists `roles/telemetry.writer` on the
 destination project and `roles/serviceusage.serviceUsageConsumer` on the quota
 project. `roles/monitoring.metricWriter` is neither needed nor sufficient: it
@@ -254,21 +259,17 @@ with no extra pipeline.
 
 ## Cost
 
-Until you exclude them, these logs are billed twice: Cloud Logging ingestion
-($0.50/GiB above the free 50 GiB per month) and BigQuery storage. The exclusion
-printed at the end of `enable-and-grant.sh` stops the Logging charge.
+The sink copies logs to BigQuery, it does not divert them. They stay in Cloud
+Logging too, so until you exclude them you pay twice: Cloud Logging ingestion
+at $0.50/GiB above the free 50 GiB a month, and BigQuery storage.
 
-Run it only after you have confirmed rows are arriving and that
-`labels.user_email` and `labels.app_version` are populated. The exclusion can be
-lifted later, but entries dropped while it was on are gone, and log entries
-cannot be rewritten.
+`enable-and-grant.sh` prints the exclusion command instead of running it. Run it
+once you have confirmed rows are arriving. The sink keeps working afterwards;
+only the Cloud Logging copy stops, and entries dropped while the exclusion is on
+cannot be recovered.
 
-Retention is deliberately left alone. It belongs to the `_Default` bucket, which
-holds every other service's logs, so tuning it for Claude Code would shorten or
-bill everyone else's too.
-
-Metrics are billed separately as Managed Service for Prometheus samples. At one
-series per developer per metric this is small.
+Metrics are billed separately as Managed Service for Prometheus samples, which
+at one series per developer per metric is small.
 
 ## Privacy
 
