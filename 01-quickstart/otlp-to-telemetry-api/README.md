@@ -29,8 +29,9 @@ permissions of their own, see [`otlp-to-collector/`](../otlp-to-collector/).
 ./enable-and-grant.sh   # APIs, IAM, BigQuery dataset, Log Router sink
 ```
 
-`enable-and-grant.sh` does everything except the `_Default` exclusion, which it
-prints for you to run later. See [Cost](#cost).
+`enable-and-grant.sh` does everything except one last command, which it prints
+for you to run once telemetry is flowing. That command stops you being billed
+for the same logs twice; see [Cost](#cost).
 
 ## 2. Configure developers
 
@@ -260,13 +261,18 @@ with no extra pipeline.
 ## Cost
 
 The sink copies logs to BigQuery, it does not divert them. They stay in Cloud
-Logging too, so until you exclude them you pay twice: Cloud Logging ingestion
-at $0.50/GiB above the free 50 GiB a month, and BigQuery storage.
+Logging as well, so until you act you pay twice: Cloud Logging ingestion at
+$0.50/GiB above the free 50 GiB a month, and BigQuery storage.
 
-`enable-and-grant.sh` prints the exclusion command instead of running it. Run it
-once you have confirmed rows are arriving. The sink keeps working afterwards;
-only the Cloud Logging copy stops, and entries dropped while the exclusion is on
-cannot be recovered.
+Every Google Cloud project has a log bucket called `_Default` that logs go to
+automatically. You can give it an *exclusion*, a rule telling it not to store
+entries matching a filter. Adding one for Claude Code's logs stops the Cloud
+Logging charge, and BigQuery still gets everything, because the Log Router sink
+takes its copy before the bucket decides what to keep.
+
+`enable-and-grant.sh` prints that command rather than running it. Run it once
+you have confirmed rows are arriving in BigQuery: from then on the tables are
+the only copy, and anything the exclusion drops cannot be recovered.
 
 Metrics are billed separately as Managed Service for Prometheus samples, which
 at one series per developer per metric is small.
