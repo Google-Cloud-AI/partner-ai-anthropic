@@ -35,9 +35,11 @@ for the same logs twice; see [Cost](#cost).
 
 ## 2. Configure developers
 
-Two routes. Use the first to try it, the second to deploy it.
+Do your own machine first and confirm the pipeline works, then deploy to
+everyone else. Step 3 depends on it, and so does the exclusion in
+[Cost](#cost): neither should be done on trust.
 
-### Try it on one machine
+### First, your own machine
 
 ```bash
 ./print-settings.sh --merge
@@ -51,9 +53,10 @@ You are not asked to type your email. The script reads it from your `gcloud`
 credential, asking Google's `tokeninfo` endpoint which address the token
 belongs to. Pass one as an argument to override, and it says so.
 
-### Roll it out with managed settings
+### Then roll it out with managed settings
 
-Developers do not need to run anything. Generate the configuration once:
+Once rows are arriving, deploy to everyone else. Developers do not need to run
+anything. Generate the configuration once:
 
 ```bash
 ./print-settings.sh --managed > managed-settings.json
