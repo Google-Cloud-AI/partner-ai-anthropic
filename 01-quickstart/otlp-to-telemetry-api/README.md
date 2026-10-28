@@ -108,14 +108,19 @@ ends up with the same values in both files. That is harmless: settings merge
 key by key and the managed file wins every key it sets, leaving the address as
 the only one that takes effect from the user file.
 
-The value is one string:
+The value is one string of literal text:
 
 ```json
-"OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=PROJECT,location=LOCATION,service.instance.id=HOSTNAME,user.email=person@example.com"
+"OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=acme-telemetry,location=us-central1,service.instance.id=sams-laptop,user.email=sam@acme.com"
 ```
 
-It has to be set as a whole, so the email cannot be split out and layered on top
-of a shared value. Whatever you include goes in the per-user string.
+Claude Code does not expand anything in it. Write real values, not shell
+variables: `$(hostname)` stays the characters `$(hostname)`. If your MDM
+substitutes the address when it writes the file, that happens in the MDM, not
+here.
+
+It also has to be set as a whole, so the email cannot be split out and layered
+on top of a shared value. Whatever you include goes in the per-machine string.
 
 `location` is a label saying where the workload runs. It takes any valid Google
 Cloud location, a region or a zone, but not `global`, which the endpoint
