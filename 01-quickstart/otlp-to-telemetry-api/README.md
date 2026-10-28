@@ -101,13 +101,12 @@ helper will have **on developer machines**, not the one it has on yours:
 
 Things to know:
 
-- **Managed settings win.** No user, project, local or `--settings` value
-  overrides them, so developers cannot redirect the export somewhere else.
-- **Repositories cannot turn telemetry on or move it.** Claude Code ignores the
-  OTLP exporter variables in a repository's `.claude/settings.json`, so a repo
-  you clone cannot start an export or change its destination.
-- **The `env` block merges per key.** Keys you leave out keep whatever a lower
-  level sets, which is what makes the per-user email below work.
+- **Nothing else can override this.** No user, project, local or `--settings`
+  value outranks managed settings, and Claude Code ignores OTLP exporter
+  variables in a repository's `.claude/settings.json` altogether, so a repo you
+  clone cannot start an export or point one elsewhere. A repo could otherwise
+  switch a signal off by setting its exporter to `none`; because the file above
+  sets both exporters, it cannot.
 - **The helper path must exist before Claude Code starts.** If it is missing,
   exports fail and Claude Code reports it in `/status`.
 
@@ -128,6 +127,11 @@ Two ways to deliver it, neither of which asks the developer to do anything:
 Prefer the first wherever you can. Because managed settings outrank every other
 level, an address placed there is one the developer cannot change. The
 Workstations route writes `~/.claude/settings.json`, which they can.
+
+`--merge` writes the whole set of keys, not just the address, so a Workstation
+ends up with the same values in both files. That is harmless: settings merge
+key by key and the managed file wins every key it sets, leaving the address as
+the only one that takes effect from the user file.
 
 The value is one string:
 
