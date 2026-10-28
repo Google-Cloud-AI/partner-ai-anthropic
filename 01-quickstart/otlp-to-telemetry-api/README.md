@@ -101,12 +101,8 @@ helper will have **on developer machines**, not the one it has on yours:
 
 Things to know:
 
-- **Nothing else can override this.** No user, project, local or `--settings`
-  value outranks managed settings, and Claude Code ignores OTLP exporter
-  variables in a repository's `.claude/settings.json` altogether, so a repo you
-  clone cannot start an export or point one elsewhere. A repo could otherwise
-  switch a signal off by setting its exporter to `none`; because the file above
-  sets both exporters, it cannot.
+- **Managed settings win.** No user, project, local or `--settings` value
+  overrides them, so developers cannot redirect the export somewhere else.
 - **The helper path must exist before Claude Code starts.** If it is missing,
   exports fail and Claude Code reports it in `/status`.
 
