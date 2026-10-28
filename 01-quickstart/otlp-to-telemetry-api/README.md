@@ -49,9 +49,8 @@ This merges the right keys into `~/.claude/settings.json`, backing the file up
 first. Restart Claude Code afterwards. Run it without `--merge` to print the
 file instead of writing it.
 
-You are not asked to type your email. The script reads it from your `gcloud`
-credential, asking Google's `tokeninfo` endpoint which address the token
-belongs to. Pass one as an argument to override, and it says so.
+You are not asked to type your email. The script takes it from your `gcloud`
+credential. Pass one as an argument to override, and it says so.
 
 ### Then roll it out with managed settings
 
