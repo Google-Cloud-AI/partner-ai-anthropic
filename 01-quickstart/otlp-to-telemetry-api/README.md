@@ -108,10 +108,10 @@ Things to know:
 
 ### The email address
 
-Under Vertex AI there is no Anthropic sign-in, so Claude Code emits an anonymous
-`user.id` and no `user.email`. Every per-developer query groups by the email, so
-something has to supply it, and it differs per person. It is the one setting the
-fleet-wide file above cannot carry.
+In GCP, Claude Code emits an anonymous `user.id` and no `user.email`. Every
+per-developer query groups by the email, so something has to supply it, and it
+differs per person. It is the one setting the fleet-wide file above cannot
+carry.
 
 Two ways to deliver it, neither of which asks the developer to do anything:
 
