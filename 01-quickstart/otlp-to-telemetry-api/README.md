@@ -128,6 +128,31 @@ rejects. On GCP, `print-settings.sh` reads the machine's zone. On a laptop
 there is no true answer, so it falls back to the region in `config.env`: valid,
 and geographically meaningless.
 
+On the laptop route, a finished file has the generated half plus that one key,
+last in `env`, different on every machine:
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://telemetry.googleapis.com",
+    "OTEL_METRIC_EXPORT_INTERVAL": "60000",
+    "OTEL_LOGS_EXPORT_INTERVAL": "5000",
+    "CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS": "180000",
+    "OTEL_METRICS_INCLUDE_RESOURCE_ATTRIBUTES": "true",
+    "OTEL_METRICS_INCLUDE_VERSION": "true",
+    "OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=your_project_id,location=us-central1,service.instance.id=sams-laptop,user.email=sam@yourcompany.com"
+  },
+  "otelHeadersHelper": "/opt/claude-code/otel-headers-helper.sh"
+}
+```
+
+On Workstations the file ships without that key and the startup script supplies
+the address separately.
+
 ### Put the files on each machine
 
 Three files, not one, with whatever already deploys files to your fleet:
