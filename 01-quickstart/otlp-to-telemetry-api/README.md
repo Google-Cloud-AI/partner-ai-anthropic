@@ -87,10 +87,14 @@ that differs per person.
 
 ### The email address
 
-In GCP, Claude Code emits an anonymous `user.id` and no `user.email`. Every
-per-developer query groups by the email, so something has to supply it, and it
-differs per person. It is the one setting the fleet-wide file above cannot
-carry.
+In GCP, Claude Code emits an anonymous `user.id` and no `user.email`. Setting
+it here is how a real address reaches the telemetry at all, and since it
+differs per person it is the one key the fleet-wide file above cannot carry.
+
+It is a label on the data, not an account or a permission. Everyone sends
+through the same endpoint holding the same role, and no developer reads or
+writes BigQuery: the Log Router sink has its own identity and that is what
+writes the rows.
 
 Two ways to deliver it, neither of which asks the developer to do anything:
 
