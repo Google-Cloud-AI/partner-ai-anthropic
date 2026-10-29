@@ -15,6 +15,8 @@ One endpoint and one credential carry both signals. If you need a collector in
 the path, for a single egress point or so that developers hold no telemetry
 permissions of their own, see [`otlp-to-collector/`](../otlp-to-collector/).
 
+
+
 ## Requirements
 
 - A GCP project for the telemetry to land in.
@@ -22,16 +24,42 @@ permissions of their own, see [`otlp-to-collector/`](../otlp-to-collector/).
   create BigQuery datasets.
 - Claude Code with OpenTelemetry support.
 
+
+
 ## 1. Set up the project
-
+An administrator runs this once for the whole organisation, on their own
+machine. Developers never run it.
 ```bash
-./setup.sh              # writes config.env, renders sql/*.local.sql
-./enable-and-grant.sh   # APIs, IAM, BigQuery dataset, Log Router sink
+./setup.sh              # asks for your project; writes config.env and ready-to-run SQL
+./enable-and-grant.sh   # creates everything in Google Cloud
 ```
+`setup.sh` is interactive. Have these ready:
 
-`enable-and-grant.sh` does everything except one last command, which it prints
-for you to run once telemetry is flowing. That command stops you being billed
-for the same logs twice; see [Cost](#cost).
+| It asks for | Notes |
+|---|---|
+| The GCP project | Where telemetry lands. Required, no default. |
+| Who may send telemetry | `DEVELOPERS` — see below |
+| Service accounts of GCP machines | `MACHINE_MEMBERS` — leave empty if everyone is on laptops |
+| BigQuery dataset and location | Defaults are fine, but the **location cannot be changed later** |
+
+Press Enter to accept the default on anything else. 
+
+`setup.sh` saves these answers to `config.env`, and fills your project and dataset names
+into the six queries in `sql/` so they are ready to run. 
+
+`DEVELOPERS` and `MACHINE_MEMBERS` take IAM principals, so the identities have
+to exist in Google Cloud: `user:` a Google account, `group:` a Google group,
+`domain:` a Cloud Identity domain, `serviceAccount:` a service account. A group
+that exists only in Okta or Entra and is not synced to Cloud Identity will not
+resolve. If your developers have no Google identity at all, that is what
+[Workload Identity Federation](#workload-identity-federation) is for.
+
+
+`enable-and-grant.sh` reads `config.env`, so run `setup.sh` first. It enables
+the APIs, grants the IAM roles, creates the BigQuery dataset, and creates the
+Log Router sink that copies the logs into it. It stops short of one last command, which it prints for you to run once
+telemetry is flowing; that one stops you being billed for the same logs twice.
+See [Cost](#cost).
 
 ## 2. Configure developers
 
@@ -50,7 +78,9 @@ first. Restart Claude Code afterwards. Run it without `--merge` to print the
 file instead of writing it.
 
 You are not asked to type your email. The script takes it from your `gcloud`
-credential. Pass one as an argument to override, and it says so.
+credential. If there is no usable `gcloud` credential, pass your email as an argument
+instead. Passing one when there is a credential overrides it, with a warning
+that the value is unverified.
 
 ### Then roll it out with managed settings
 
@@ -87,9 +117,10 @@ that differs per person.
 
 ### The email address
 
-In GCP, Claude Code emits an anonymous `user.id` and no `user.email`. Setting
-it here is how a real address reaches the telemetry at all, and since it
-differs per person it is the one key the fleet-wide file above cannot carry.
+Claude Code does not know anyone's email address. In GCP it tags the data with
+a random id instead, so reports come out anonymous. To see who spent what, you
+have to supply `user.email` yourself — and because it differs for every person,
+it is the one setting the shared file above does not carry.
 
 It is a label on the data, not an account or a permission. Everyone sends
 through the same endpoint holding the same role, and no developer reads or
@@ -107,24 +138,13 @@ Prefer the first wherever you can. Because managed settings outrank every other
 level, an address placed there is one the developer cannot change. The
 Workstations route writes `~/.claude/settings.json`, which they can.
 
-`--merge` writes the whole set of keys, not just the address, so a Workstation
-ends up with the same values in both files. That is harmless: settings merge
-key by key and the managed file wins every key it sets, leaving the address as
-the only one that takes effect from the user file.
-
-The value is one string of literal text:
+The value is one string of literal text, so write real values rather than
+shell variables:
+:
 
 ```json
 "OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=your_project_id,location=us-central1,service.instance.id=sams-laptop,user.email=sam@yourcompany.com"
 ```
-
-Claude Code does not expand anything in it. Write real values, not shell
-variables: `$(hostname)` stays the characters `$(hostname)`. If your MDM
-substitutes the address when it writes the file, that happens in the MDM, not
-here.
-
-It also has to be set as a whole, so the email cannot be split out and layered
-on top of a shared value. Whatever you include goes in the per-machine string.
 
 `location` is a label saying where the workload runs. It takes any valid Google
 Cloud location, a region or a zone, but not `global`, which the endpoint
@@ -218,8 +238,6 @@ No change to the helper is needed. A credential configuration activates through
 Application Default Credentials, and `gcloud auth print-access-token` then
 returns a short-lived federated token like any other.
 
-This path was not exercised in this project, which has no pool and no external
-identity provider. The rest of this README describes behaviour that was run.
 
 ### Service account keys
 
@@ -227,37 +245,31 @@ Avoid them. A key file does not expire, has to be copied to every laptop, and
 cannot be revoked for one person without rotating it for everyone. Audit logs
 name the service account rather than whoever used it.
 
-Many organisations block them outright. The organisation behind this project
-enforces both `iam.disableServiceAccountKeyCreation` and
-`iam.disableServiceAccountKeyUpload`, so the option does not exist there at all.
 
 ### Authentication and attribution are separate
 
 The credential that carries an export has nothing to do with the email on the
 rows. On a Google Cloud Workstation the machine's service account sends the data while
 the rows still name the developer. A row's `user_email` tells you nothing about
-which token sent it, and reviewers get this wrong often enough to be worth
-stating twice.
+which token sent it.
 
 ## Permissions
 
-Two different principals send telemetry, and granting only the first is the
-usual reason a new deployment writes nothing:
+Who sends the telemetry depends on where Claude Code runs — sometimes the
+developer, sometimes the machine:
 
 | Where Claude Code runs | Who authenticates | `config.env` list |
 |---|---|---|
 | Laptop, off GCP | the developer | `DEVELOPERS` |
 | GCE VM, Google Cloud Workstation | the machine's service account | `MACHINE_MEMBERS` |
 
-`otel-headers-helper.sh` asks the metadata server first, and on GCP compute it
-always answers, so the export is authenticated by the machine even when the
-developer is signed in with `gcloud` on that same box. Leave `MACHINE_MEMBERS`
-empty if everyone works on laptops.
+The machine wins on GCP compute even when a developer is signed in with
+`gcloud`; see [Authentication](#authentication).
+
 
 `enable-and-grant.sh` grants both lists `roles/telemetry.writer` on the
 destination project and `roles/serviceusage.serviceUsageConsumer` on the quota
-project. `roles/monitoring.metricWriter` is neither needed nor sufficient: it
-covers `monitoring.googleapis.com`, which these clients never call.
+project. 
 
 Reading the data is a separate grant that these scripts do not make. BigQuery
 needs `roles/bigquery.dataViewer` and `roles/bigquery.jobUser`; the dashboards
@@ -387,7 +399,7 @@ use [`bigquery-mod/`](../bigquery-mod/), which ignores
 
 | File | What it does |
 |---|---|
-| `setup.sh` | Asks for configuration, writes `config.env`, renders `sql/*.local.sql` |
+| `setup.sh` | Asks for configuration, writes `config.env` and ready to run SQL |
 | `enable-and-grant.sh` | Enables APIs, grants IAM, creates the dataset and sink, prints the exclusion |
 | `print-settings.sh` | Produces developer or fleet-wide Claude Code settings |
 | `otel-headers-helper.sh` | Mints the access token for each export |
