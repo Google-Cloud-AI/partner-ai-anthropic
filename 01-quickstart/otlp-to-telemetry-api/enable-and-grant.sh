@@ -85,7 +85,7 @@ fi
 # service account is used instead — even for a developer signed in with gcloud.
 # Granting only DEVELOPERS leaves every export from GCP compute rejected.
 # Attribution is unaffected either way: user.email is resolved per developer by
-# print-settings.sh and is independent of whoever holds the token.
+# policy-helper.sh and is independent of whoever holds the token.
 TELEMETRY_MEMBERS="${DEVELOPERS:-} ${MACHINE_MEMBERS:-}"
 if [[ -z "${TELEMETRY_MEMBERS// /}" ]]; then
   echo "==> No DEVELOPERS or MACHINE_MEMBERS set; skipping IAM grants"
@@ -120,9 +120,10 @@ fi
 # the log name: log names on this path are the bare event name (`api_request`),
 # not `claude_code.api_request` — the dotted string is the entry's text_payload,
 # so a logName-prefix filter matches nothing, silently. The resource labels come
-# from the OTLP attributes: job=claude-code (service.name), task_id (hostname).
+# from the OTLP attributes: job=service.name, task_id=hostname. service.name is
+# claude-code, or claude-code-desktop for the desktop app's Code tab.
 # The per-event log names still give the sink one table per event type.
-SINK_FILTER='resource.type="generic_task" AND resource.labels.job="claude-code"'
+SINK_FILTER='resource.type="generic_task" AND resource.labels.job=("claude-code" OR "claude-code-desktop")'
 
 echo "==> Creating Log Router sink '${SINK_ID}'"
 DEST="bigquery.googleapis.com/projects/${PROJECT}/datasets/${SINK_DATASET}"
@@ -157,11 +158,27 @@ else
   # logging.logEntries.route. Rows did land here without logWriter, but an
   # undocumented permission that happens to work today is not something to
   # depend on.
+  #
+  # On a project's first sink the writer identity is created on the spot, and
+  # IAM can take a minute or two to see it. Until then a binding fails with
+  # "Service account ... does not exist", and not consistently: on a fresh
+  # project the first role bound and the second failed a moment later. So
+  # retry on that error only; any other failure stops the run immediately.
   for role in roles/bigquery.dataEditor roles/logging.logWriter; do
-    gcloud projects add-iam-policy-binding "${PROJECT}" \
-      --member="${WRITER}" \
-      --role="${role}" \
-      --condition=None --quiet >/dev/null
+    for delay in 10 20 30 40 0; do
+      if err="$(gcloud projects add-iam-policy-binding "${PROJECT}" \
+            --member="${WRITER}" \
+            --role="${role}" \
+            --condition=None --quiet 2>&1 >/dev/null)"; then
+        break
+      fi
+      if [[ "${err}" != *"does not exist"* || "${delay}" -eq 0 ]]; then
+        echo "${err}" >&2
+        exit 1
+      fi
+      echo "   ... writer identity not visible to IAM yet; retrying ${role} in ${delay}s"
+      sleep "${delay}"
+    done
   done
   echo "   - ${WRITER}"
 fi
@@ -180,7 +197,8 @@ if gcloud logging sinks describe _Default --project="${PROJECT}" \
   echo "   - already excluded from _Default"
 else
   cat <<EOF
-   NOT applied automatically. Verify the sink works first:
+   NOT applied automatically. After you have rolled out the managed settings,
+   verify the sink:
 
      1. Run some Claude Code traffic (a few turns, with tool use).
      2. Confirm rows are arriving:
@@ -188,9 +206,11 @@ else
             'SELECT COUNT(*) FROM \`${PROJECT}.${SINK_DATASET}.api_request\`'
      3. Confirm the identity labels made it into the schema — run
           sql/00-schema.local.sql
-        and check for labels.user_email and labels.app_version. If they are
-        absent, the two settings that produce them are off (see
-        print-settings.sh) — fix those and let NEW traffic land before going on.
+        and check for labels.user_email and labels.app_version. If user_email is
+        absent, check that policy-helper.sh is running and that developers have
+        signed in with gcloud. If either is absent, also check the two
+        OTEL_METRICS_INCLUDE_* keys in managed-settings.json. Fix it and let NEW
+        traffic land before going on.
         Log entries cannot be rewritten after the fact.
      4. Only then exclude them from the _Default bucket:
           gcloud logging sinks update _Default \\
@@ -205,5 +225,6 @@ EOF
 fi
 
 echo
-echo "Developers now run: ./print-settings.sh --merge"
-echo "Then restart Claude Code. Query with the rendered sql/*.local.sql files."
+echo "Next: deploy managed-settings.json and the two helper scripts to developer"
+echo "machines (see README.md). Query with the rendered sql/*.local.sql files."
+echo "Once rows are landing (including some tool use): ./create-views.sh"

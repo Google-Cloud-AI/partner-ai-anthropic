@@ -4,8 +4,8 @@ Claude Code OpenTelemetry straight into Google Cloud. Claude Code exports OTLP
 to `telemetry.googleapis.com` directly, which fans out by signal type: log
 records go to Cloud Logging, where a Log Router sink writes them into BigQuery
 tables you query with SQL; metrics go to Cloud Monitoring, where they feed
-dashboards. Nothing to deploy — no collector, no container image, no service
-accounts.
+dashboards. No server to deploy — no collector, no container image, no service
+accounts to create.
 
 ```
                                            ┌─> Cloud Logging ─> sink ─> BigQuery
@@ -17,18 +17,33 @@ One endpoint and one credential serve both signals.
 
 ## Quickstart
 
+An org admin does all of this once. Developers run no scripts.
+
 ```bash
-./setup.sh                              # writes config.env, renders sql/*.local.sql
-./enable-and-grant.sh                   # APIs, IAM, BigQuery dataset, Log Router sink
-./print-settings.sh --merge             # each developer runs this, then restarts
+./setup.sh              # writes config.env and managed-settings.json, renders sql/*.local.sql
+./enable-and-grant.sh   # APIs, IAM, BigQuery dataset, Log Router sink
 ```
 
-`print-settings.sh` takes no email: it derives your address from your `gcloud`
-credential and verifies it with Google, so nobody can be recorded as someone
-else by typing the wrong thing. Pass one explicitly to override, and it will
-warn that the value is asserted rather than verified.
+Then [roll out the managed settings](#roll-out-with-managed-settings). After a
+developer has run a few turns, check that rows arrive:
 
-Then run `sql/00-schema.local.sql` first, and the rest once rows are landing.
+```bash
+bq query --use_legacy_sql=false 'SELECT COUNT(*) FROM `YOUR_PROJECT_ID.YOUR_SINK_DATASET.api_request`'
+```
+
+A new sink takes a few minutes to start routing, and entries that arrive before
+then never reach BigQuery. If that query finds no table a few minutes after the
+first turns, run a few more and check again.
+
+Run `sql/00-schema.local.sql` in the BigQuery console first, then the other
+`.local.sql` files. Once rows are landing, including some tool use, run
+`./create-views.sh` for the [reporting views](#the-views); it skips any view
+whose tables the sink has not created yet. Last,
+[decide on the exclusion](#cost): until you apply it, these logs are billed
+twice.
+
+To try the pipeline on your own machine before the fleet rollout, see
+[Try it without installing](#try-it-without-installing).
 
 ### Who needs access, and who actually sends
 
@@ -37,7 +52,7 @@ this fails:
 
 | Where Claude Code runs | Credential used | Grant |
 |---|---|---|
-| Laptop, off GCP | the developer's own `gcloud auth login` | `DEVELOPERS` |
+| Laptop, off GCP | the developer's own `gcloud` sign-in | `DEVELOPERS` |
 | GCE VM / Cloud Workstation | the **machine's** service account | `MACHINE_MEMBERS` |
 
 `otel-headers-helper.sh` tries the metadata server first, so on GCP compute the
@@ -46,12 +61,214 @@ machine's service account wins even when the developer is signed in with
 `enable-and-grant.sh` grants `roles/telemetry.writer` and
 `roles/serviceusage.serviceUsageConsumer` to each.
 
-This is purely about *authentication*. Attribution is separate: `print-settings.sh`
-derives `user.email` from the developer's own `gcloud` credential and verifies
-it against Google's tokeninfo endpoint, independently of whichever credential
-later carries the export. So on a Workstation the machine's service account
-sends the data while the row still names the developer — and a row's
-`user_email` tells you nothing about which token sent it.
+Attribution is separate: `policy-helper.sh` takes `user.email` from the
+developer's own `gcloud` sign-in, whichever credential sends the export. So on a
+Workstation the row names the developer only if they have signed in there, and a
+row's `user_email` says nothing about which token sent it.
+
+## Roll out with managed settings
+
+Claude Code reads
+[managed settings](https://code.claude.com/docs/en/managed-settings) above every
+other settings level, so one deployment
+[turns telemetry on for every developer](https://code.claude.com/docs/en/monitoring-usage#administrator-configuration)
+and
+[developers can't redirect it](https://code.claude.com/docs/en/monitoring-usage#how-managed-settings-lock-the-otlp-destination).
+Developers need Claude Code 2.1.257 or later, which supports the
+[`policyHelper`](https://code.claude.com/docs/en/settings-reference#policyhelper)
+setting this rollout relies on. An admin deploys three files to each machine,
+which also needs `gcloud` installed:
+
+| File | macOS | Linux and WSL |
+|---|---|---|
+| `managed-settings.json` | `/Library/Application Support/ClaudeCode/` | `/etc/claude-code/` |
+| `policy-helper.sh` | `/usr/local/libexec/claude-code-telemetry/` | same |
+| `otel-headers-helper.sh` | `/usr/local/libexec/claude-code-telemetry/` | same |
+
+Both scripts must be executable. Make them owned by root and not writable by
+developers too: what `policy-helper.sh` prints becomes the managed settings. Push all three as files with
+the tool that already manages your fleet: Jamf, Intune, Ansible, or the image for
+your Cloud Workstations. With an MDM, use its file or script delivery, not a
+configuration profile: a profile outranks this file, so the helper does not run
+and nothing reaches Google. Move any keys from an existing profile into this
+file. Each developer picks up the change at their next Claude Code start.
+
+**A mistake here stops Claude Code from starting on every machine it reaches.** It
+refuses to start if the file names a `policyHelper` that is missing or not
+executable, so deliver the scripts before the file, and when removing this setup,
+remove the file first. It also refuses if a key holds an invalid value it can't repair: without a
+helper it would only drop that key, but helper output is checked more strictly. Test
+every edit first with [Try it without installing](#try-it-without-installing),
+then install it on one machine and [check the rollout](#check-the-rollout).
+
+On one Linux machine, the install looks like this. If the machine already has a
+`managed-settings.json`, merge these keys into it instead of replacing it.
+
+```bash
+sudo install -d /etc/claude-code /usr/local/libexec/claude-code-telemetry
+sudo install -m 755 policy-helper.sh otel-headers-helper.sh /usr/local/libexec/claude-code-telemetry/
+sudo install -m 644 managed-settings.json /etc/claude-code/
+```
+
+### What developers still do
+
+Each developer signs in to Google, and again when that session expires, with
+`gcloud auth login` or `gcloud auth application-default login`. Claude Code on
+Vertex AI already needs the second, and both helpers accept either. Until a
+developer signs in, Claude Code works normally but exports nothing, and shows a
+warning. On GCP compute the machine's service account sends the data without a
+sign-in, but the row names the developer only if they have signed in.
+On a GCE VM or Cloud Workstation that means running `gcloud auth login` on the
+machine itself; without it, rows go out with no `user_email`. Use
+`gcloud auth login` there rather than `gcloud auth application-default login`,
+which would also move Claude Code's Vertex AI calls from the machine's service
+account to the developer.
+
+### Try it without installing
+
+To try `managed-settings.json` and check the sink, the SQL and the views before
+touching any developer machine, run this command in this folder after
+`./setup.sh` and `./enable-and-grant.sh`. It needs no `sudo` and installs nothing.
+No rows arrive unless the credential that sends them has the access described in
+[Who needs access](#who-needs-access-and-who-actually-sends):
+
+```bash
+settings="$(./policy-helper.sh --try)" \
+  && printf '%s\n' "${settings}" > try-settings.json \
+  && alias claude="claude --settings '${PWD}/try-settings.json'"
+```
+
+The command runs `policy-helper.sh` on this folder's `managed-settings.json`,
+writes the result to `try-settings.json`, and makes every `claude` you start in
+this shell use that file, so those sessions send what a rollout would send. That
+includes your address if Google can verify your `gcloud` sign-in. If it can't,
+the command warns you and rows go out without it, so sign in and run the command
+again if you want to check the SQL and the views. The command doesn't change
+`~/.claude/settings.json`, and other shells and scripts run `claude` without this
+file. The sessions use `otel-headers-helper.sh` in this folder, so keep the folder
+where it is. Start `claude`, run a few turns, then check for rows with the query
+in the [Quickstart](#quickstart). Close the shell or run `unalias claude` to stop.
+
+To see the settings, open `try-settings.json`. Claude Code ignores its
+`policyHelper` entry, which only takes effect in managed settings. An edit
+reaches the next `claude` you start, not one already running. The file keeps your
+email address and hostname from when it was written, so run the command again
+after you change your `gcloud` sign-in or `managed-settings.json`. That overwrites
+your edits to `try-settings.json`, so make any change you want to keep in
+`managed-settings.json`.
+
+If Claude Code reports a settings error in `try-settings.json`, the session can
+carry on but sends nothing. Make the fix in `managed-settings.json` and run the
+command again, because the same mistake there stops Claude Code from starting once
+the file is deployed. Trying the settings this way does not test the installed
+files, so still check one machine as in [Check the rollout](#check-the-rollout).
+On a machine that already has the managed settings, they take priority and
+`try-settings.json` has no effect; `/status` then lists
+`Enterprise managed settings (helper)` under setting sources.
+The path to this folder can't contain `'`, `"` or `\`.
+
+### Example `managed-settings.json`
+
+`setup.sh` renders this from
+[`managed-settings.example.json`](./managed-settings.example.json), filling in
+your project, quota project and region. It has the same shape as a
+`settings.json`, but it must be named `managed-settings.json` and sit in the
+system folder above, not in `~/.claude/`.
+
+```json
+{
+  "policyHelper": {
+    "path": "/usr/local/libexec/claude-code-telemetry/policy-helper.sh"
+  },
+  "otelHeadersHelper": "/usr/local/libexec/claude-code-telemetry/otel-headers-helper.sh YOUR_QUOTA_PROJECT",
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://telemetry.googleapis.com",
+    "OTEL_SERVICE_NAME": "claude-code",
+    "OTEL_METRIC_EXPORT_INTERVAL": "60000",
+    "OTEL_LOGS_EXPORT_INTERVAL": "5000",
+    "CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS": "180000",
+    "OTEL_RESOURCE_ATTRIBUTES": "gcp.project_id=YOUR_PROJECT_ID,location=YOUR_LOCATION,service.instance.id=unknown",
+    "OTEL_METRICS_INCLUDE_RESOURCE_ATTRIBUTES": "true",
+    "OTEL_METRICS_INCLUDE_VERSION": "true"
+  }
+}
+```
+
+Some of these values are easy to get wrong:
+
+| Key | Why it is set this way |
+|---|---|
+| `otelHeadersHelper` | A top-level key, a sibling of `env`. Google access tokens expire after an hour, so Claude Code re-runs this [dynamic headers](https://code.claude.com/docs/en/monitoring-usage#dynamic-headers) script instead of sending a static token. |
+| `OTEL_SERVICE_NAME` | Already the default. It is set so that a developer's own value can't take their logs out of the sink, which matches on it. |
+| `OTEL_RESOURCE_ATTRIBUTES` | Leave `service.instance.id=unknown` exactly as it is: `policy-helper.sh` replaces that text. You can add other attributes beside it. |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | Keep `http/protobuf`. Under `grpc`, Claude Code ignores `otelHeadersHelper`, so exports start failing when the first token expires. |
+| `CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS` | Keep it under 5 minutes. The helper can be handed a cached token with only 5 minutes left, and at the 29-minute default that token expires long before the next refresh. See `otel-headers-helper.sh`. |
+| `OTEL_METRIC_EXPORT_INTERVAL` | Do not lower it below 15000. See the cost warning under [Signals](#signals-which-side-answers-what). `OTEL_LOGS_EXPORT_INTERVAL` has no such floor. |
+| `OTEL_METRICS_INCLUDE_RESOURCE_ATTRIBUTES` | A boolean, and it governs log records too. Naming attributes in it reads as false and drops `user.email` from every entry. |
+| `OTEL_METRICS_INCLUDE_VERSION` | Defaults to false. It also governs log records, and it produces `labels.app_version`. |
+
+### Why there is a policy helper
+
+Two values in `OTEL_RESOURCE_ATTRIBUTES` differ from machine to machine, and
+Claude Code does not expand that string, so `$(hostname)` would stay literal:
+
+| Attribute | Value | Source |
+|---|---|---|
+| `gcp.project_id` | Same for everyone | `managed-settings.json` |
+| `location` | Same for everyone, so pick the region deliberately. The endpoint requires a real region and rejects `global` | `managed-settings.json` |
+| `service.instance.id` | The hostname; required by the endpoint, and the `host` column in `sql/` | `policy-helper.sh` |
+| `user.email` | The developer's address, verified with Google | `policy-helper.sh` |
+
+On Vertex AI there is no Claude account in the session, so Claude Code cannot
+fill in `user.email` itself. A
+[`policyHelper`](https://code.claude.com/docs/en/managed-settings#compute-the-policy-with-a-helper-program)
+closes the gap. Claude Code runs `policy-helper.sh` as the developer at every
+start, and it prints `managed-settings.json` back with
+`service.instance.id=unknown` replaced by the real values.
+
+Keep all of your managed settings in this one `managed-settings.json`. The helper
+re-emits that file and nothing else, so keys in `managed-settings.d/` stop
+applying.
+
+Each start waits for the helper, about 1 to 3 seconds in testing and at most 5.
+If it can't verify a person's address in that time, Claude Code still starts and
+rows go out without `user.email`. The queries in `sql/` then show `user.id` instead,
+prefixed `id:`, but they need the `labels.user_email` column to exist, so at least
+one signed-in developer has to send traffic first.
+
+### Where this does not reach
+
+- **Server-managed settings** from the claude.ai admin console
+  [don't reach Vertex AI sessions](https://code.claude.com/docs/en/server-managed-settings#platform-availability).
+  Where they do apply, such as a developer signed in to a Team or Enterprise
+  account, they take precedence, so the helper does not run and nothing reaches
+  Google.
+- **Native Windows** is not covered by this quickstart: both scripts are bash, and a
+  `policyHelper` must be an `.exe` there.
+
+### Check the rollout
+
+On one machine, as a developer rather than with `sudo`, print what the helper
+computes (this needs `jq`), then confirm it in Claude Code:
+
+```bash
+/usr/local/libexec/claude-code-telemetry/policy-helper.sh | jq -r .managedSettings.env.OTEL_RESOURCE_ATTRIBUTES
+```
+
+Expect `gcp.project_id=...,location=...,service.instance.id=<hostname>,user.email=<address>`.
+
+In Claude Code, `/status` should list `Enterprise managed settings (helper)`
+under setting sources. It also shows any `otelHeadersHelper` failure. In the
+`sql/` results, a `host` of `unknown` means the helper did not run on that
+machine, for example on a Claude Code version without `policyHelper`. A `user_key`
+(the developer column) starting `id:` means no address was verified. If no rows
+reach BigQuery, start Claude Code with
+`claude --debug-file <path>` and look for `[3P telemetry]` errors, or see the
+[monitoring docs](https://code.claude.com/docs/en/monitoring-usage).
 
 ## The data
 
@@ -115,19 +332,46 @@ subquery wrapping the source rather than appended to the outer read.
 | `04-prompts.sql` | One row per turn across all five event types — cost, tools, response size, and where the wall clock went. |
 | `05-sessions.sql` | One row per session — span, turns, cost per turn, reject rate, hook time as a share of the session. |
 
+Run the `.local.sql` copies that `setup.sh` renders.
+
 `04` and `05` pre-aggregate each event family to one row per join key *before*
 joining. Joining the raw tables fans out — a turn with six tool calls would
 count its cost six times.
+
+## The views
+
+`create-views.sh` adds three views in their own dataset (`VIEWS_DATASET`,
+default `<SINK_DATASET>_reporting`), so people who read them need no access to
+the raw log tables. Each keeps one row per `insertId`, like the queries above.
+
+| View | One row per | Columns |
+|---|---|---|
+| `daily_spend` | day × user | `api_requests`, `cost_usd`, input/output/cache tokens |
+| `spend_by_model` | day × model | the same |
+| `daily_usage` | day × user × model | the same, plus `sessions`, `tool_calls_proposed`, `tool_calls_rejected`, `tool_calls`, `tool_calls_failed` |
+
+A user is `labels.user_email`, or `id:` and the anonymous `user.id` when that
+is empty.
+
+Tool events carry no model, so `daily_usage` gives each tool call the model of
+the API request that asked for it, matched on `labels.request_id`.
+
+Run the script once rows are landing. The sink creates each table the first time
+that event type arrives, and BigQuery will not create a view over a missing
+table, so `daily_usage` waits for the first tool use (`tool_decision`,
+`tool_result`). A view whose tables are missing is skipped with a message;
+re-run the script later. It is safe to re-run and only replaces the views.
 
 ## Cost
 
 Until you exclude them, these logs are billed twice: Cloud Logging ingestion
 ($0.50/GiB above the free 50 GiB/month) plus BigQuery storage. The exclusion at
-the end of `enable-and-grant.sh` stops the Logging charge.
+the end of `enable-and-grant.sh` stops the Logging charge; re-run that script to
+print the exact command.
 
 It is **not applied automatically**, and what it drops is gone for good. Run
 traffic, confirm rows are in BigQuery, confirm `labels.user_email` and
-`labels.app_version` are populated (`00-schema.sql`), and only then exclude.
+`labels.app_version` exist (`00-schema.sql`), and only then exclude.
 Afterwards these tables are the only copy and log entries cannot be rewritten.
 The exclusion itself can be lifted later
 (`gcloud logging sinks update _Default --remove-exclusions=claude-code-excluded`);
@@ -171,34 +415,32 @@ descriptors this export already produces.
 > DELTA, a rejected point is lost for good rather than healing on the next write.
 > Measured here over three days at a 10s export interval, the metric read 15.5%
 > under the logs ($15.5625 vs $18.4073), worst on the busiest day. That is why
-> `print-settings.sh` emits `OTEL_METRIC_EXPORT_INTERVAL: 60000` — **do not lower
-> it below 15000.** Sparse series (`commit.count`, `pull_request.count`) are
+> `managed-settings.json` sets `OTEL_METRIC_EXPORT_INTERVAL` to 60000 — **do not
+> lower it below 15000.** Sparse series (`commit.count`, `pull_request.count`) are
 > unaffected either way; dense ones (`cost.usage`, `token.usage`) are where the
 > loss lands.
 
-For the collector-based alternative, see
-[`otlp-to-collector/`](../otlp-to-collector/).
-
 ## Privacy
 
-What is and is not captured follows three settings, so read them rather than
-the sample data. `print-settings.sh` leaves `OTEL_LOG_USER_PROMPTS`,
-`OTEL_LOG_ASSISTANT_RESPONSES` and `OTEL_LOG_TOOL_DETAILS` unset, and all three
-default to off. With them off, `user_prompt` entries carry a length only,
-`labels.response` on `assistant_response` is always `<REDACTED>` (use
-`labels.response_length`), and tool events carry no commands or inputs. If any
-of them is turned on — through managed settings, for example — that content
-lands in these tables. When `OTEL_LOG_ASSISTANT_RESPONSES` is unset it follows
+What is and is not captured follows four settings, so read them rather than the
+sample data: `OTEL_LOG_USER_PROMPTS`, `OTEL_LOG_ASSISTANT_RESPONSES`,
+`OTEL_LOG_TOOL_DETAILS` and `OTEL_LOG_RAW_API_BODIES`. All default to off, and
+`managed-settings.json` leaves them unset, so a developer can still turn one on
+for their own sessions, and that content then lands in these tables. You can
+prevent that by setting them to `"0"` in `managed-settings.json`. With them off, `user_prompt` entries carry a length only, `labels.response` on `assistant_response` is always
+`<REDACTED>` (use `labels.response_length`), and tool events carry no commands or
+inputs. When `OTEL_LOG_ASSISTANT_RESPONSES` is unset it follows
 `OTEL_LOG_USER_PROMPTS`.
 
 `user.id` is a random per-install identifier, not a hash of anything —
 reinstalling generates a new unrelated value, so it cannot be traced back to a
 person on its own. `user.email` is the only field in these tables that names
 someone. It is present because `OTEL_RESOURCE_ATTRIBUTES` sets it, and
-`print-settings.sh` fills that in from the developer's verified `gcloud`
-identity rather than from free text — so it is reliable enough to bill against,
-but note that a developer with write access to their own `settings.json` can
-still change it afterwards. It is an accuracy control, not a security boundary.
+`policy-helper.sh` fills that in from the developer's verified `gcloud` identity
+rather than from free text, at every start. Managed settings override these keys in a developer's own `settings.json` or
+shell, so where an address is present it is reliable enough to bill against. It
+is still an accuracy control, not a security boundary: the helper runs as the
+developer, so a developer who sets out to change it can.
 
 The redaction above was confirmed on this deployment on 2026-09-24: max
 `LENGTH(labels.response)` was 10 (the literal `<REDACTED>`) while
