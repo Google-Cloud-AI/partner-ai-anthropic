@@ -63,3 +63,16 @@ Contributors come from more than one company, and under the CLA each keeps the
 copyright to their contribution. A single project-wide line means nobody has to
 decide ownership file by file, and the line stays accurate when someone from
 another company edits the file later; git history records who wrote what.
+
+### How changes reach `main`
+
+This repository is published from Google's internal source control. Every
+change, including every pull request opened here, is reviewed internally
+before it lands, and [Copybara](https://github.com/google/copybara) commits the
+result to `main`.
+
+1.  Open your pull request against `main` and sign the CLA.
+2.  After a maintainer approves the latest commit, Copybara imports the pull
+    request for internal review.
+3.  When the change is accepted, Copybara commits it to `main` and marks the
+    pull request as merged. Pull requests are not merged directly on GitHub.
