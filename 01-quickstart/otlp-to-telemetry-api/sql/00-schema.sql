@@ -21,10 +21,12 @@
 -- Check for: labels.user_email, labels.app_version, labels.session_id,
 -- labels.prompt_id, labels.tool_use_id, labels.cost_usd.
 --
--- If user_email or app_version are missing, the two settings that produce them
--- are off (see print-settings.sh). Fix those and let NEW traffic land — log
--- entries cannot be rewritten, and after the _Default exclusion this is the only
--- copy. Schema evolution is additive, so later labels appear as new columns.
+-- If user_email is missing, check that policy-helper.sh is running and that
+-- developers have signed in with gcloud. If either is missing, also check the
+-- two OTEL_METRICS_INCLUDE_* keys in managed-settings.json. Fix it and let NEW
+-- traffic land — log entries cannot be rewritten, and after the _Default
+-- exclusion this is the only copy. Schema evolution is additive, so later labels
+-- appear as new columns.
 
 -- 1. Which event tables exist, and how big.
 -- __TABLES__ names the column table_id, not table_name.

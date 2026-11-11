@@ -30,8 +30,8 @@ CREATE TEMP TABLE requests AS
 SELECT
   timestamp,
   resource.labels.task_id AS host,
-  -- user.email is absent on rows written before OTEL_METRICS_INCLUDE_RESOURCE_
-  -- ATTRIBUTES was on; fall back to the hashed id so those rows still count.
+  -- user.email is absent when no address could be verified; fall back to the
+  -- per-install id so those rows still count.
   COALESCE(labels.user_email, CONCAT('id:', SUBSTR(labels.user_id, 1, 12))) AS user_key,
   labels.model AS model,
   SAFE_CAST(labels.cost_usd              AS FLOAT64) AS cost_usd,

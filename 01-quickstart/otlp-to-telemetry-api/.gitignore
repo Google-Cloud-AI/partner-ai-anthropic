@@ -1,8 +1,11 @@
 # Your real values (created by setup.sh from config.env.example)
 config.env
 
+# Rendered by setup.sh from managed-settings.example.json
+managed-settings.json
+
+# Written by the "Try it without installing" command; holds your email address
+try-settings.json
+
 # Project-specific SQL rendered by setup.sh from the sql/*.sql templates
 sql/*.local.sql
-
-# settings.json backups, if anyone runs the scripts from inside the repo
-*.bak.*

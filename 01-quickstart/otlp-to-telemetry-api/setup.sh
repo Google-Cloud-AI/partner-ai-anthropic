@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Interactive setup: writes config.env (from your answers) and renders the SQL
+# Interactive setup: writes config.env (from your answers), renders
+# managed-settings.example.json to managed-settings.json, and renders the SQL
 # templates in sql/ to project-specific *.local.sql files. Safe to re-run —
 # existing config.env values become the defaults.
 
@@ -53,8 +54,8 @@ done
 QUOTA_PROJECT="${QUOTA_PROJECT:-${PROJECT}}"
 ask QUOTA_PROJECT     "Quota project (x-goog-user-project; usually the same)"
 ask DEVELOPERS        "Who may send telemetry (prefer domain:yourco.com or group:team@yourco.com, so you never list individuals)"
-ask MACHINE_MEMBERS   "SAs of GCE/Workstation machines running Claude Code (serviceAccount:...; on GCP the MACHINE authenticates, not the developer)"
-ask FALLBACK_LOCATION "Region to report when off GCP (must be a real region; 'global' is rejected)"
+ask MACHINE_MEMBERS   "Service accounts of GCE VMs and Cloud Workstations that run Claude Code (serviceAccount:...; leave empty if none)"
+ask LOCATION          "Region to report as location (must be a real region; 'global' is rejected)"
 
 echo
 echo "  Logs are routed to real BigQuery tables by a Log Router sink."
@@ -65,6 +66,8 @@ echo "  confirmed rows are actually landing in BigQuery."
 ask SINK_ID           "Log Router sink name"
 ask SINK_DATASET      "BigQuery dataset for routed logs"
 ask BQ_LOCATION       "BigQuery location for the dataset (cannot be changed later)"
+VIEWS_DATASET="${VIEWS_DATASET:-${SINK_DATASET}_reporting}"
+ask VIEWS_DATASET     "BigQuery dataset for the reporting views (create-views.sh)"
 
 cat > "${CONFIG}" <<EOF
 # Written by setup.sh. Gitignored — safe to hold real values.
@@ -76,15 +79,23 @@ DEVELOPERS="${DEVELOPERS}"
 MACHINE_MEMBERS="${MACHINE_MEMBERS}"
 
 # ---- Resource attributes ------------------------------------------------------
-FALLBACK_LOCATION="${FALLBACK_LOCATION}"
+LOCATION="${LOCATION}"
 
 # ---- BigQuery -----------------------------------------------------------------
 SINK_ID="${SINK_ID}"
 SINK_DATASET="${SINK_DATASET}"
 BQ_LOCATION="${BQ_LOCATION}"
+VIEWS_DATASET="${VIEWS_DATASET}"
 EOF
 echo
 echo "==> Wrote ${CONFIG}"
+
+# ---- Render the managed settings --------------------------------------------
+sed -e "s/YOUR_PROJECT_ID/${PROJECT}/g" \
+    -e "s/YOUR_QUOTA_PROJECT/${QUOTA_PROJECT}/g" \
+    -e "s/YOUR_LOCATION/${LOCATION}/g" \
+    "${SCRIPT_DIR}/managed-settings.example.json" > "${SCRIPT_DIR}/managed-settings.json"
+echo "==> Rendered managed-settings.json"
 
 # ---- Render SQL templates ---------------------------------------------------
 # Every template is sink-mode, so they all render unconditionally.
