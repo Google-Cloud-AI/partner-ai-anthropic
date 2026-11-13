@@ -66,6 +66,48 @@ developer's own `gcloud` sign-in, whichever credential sends the export. So on a
 Workstation the row names the developer only if they have signed in there, and a
 row's `user_email` says nothing about which token sent it.
 
+Whatever you put in `DEVELOPERS` and `MACHINE_MEMBERS` has to exist in Google
+Cloud, because IAM grants roles to real identities. Four forms work:
+
+| Prefix | Means |
+|---|---|
+| `user:` | one Google account |
+| `group:` | a Google group |
+| `domain:` | a Cloud Identity domain, so everyone in it |
+| `serviceAccount:` | a service account, which is what `MACHINE_MEMBERS` holds |
+
+A group that exists only in Okta or Entra, and has not been synced to Cloud
+Identity, will not resolve.
+
+### Workload Identity Federation
+
+Use it when the above does not fit: developers with no Google identity, or a
+policy against granting telemetry roles to people at all.
+
+Federate from the identity provider you already run, grant
+`roles/telemetry.writer` once to a service account the pool can impersonate or
+to the federated `principalSet://` directly, and put that one principal in
+`DEVELOPERS`. No individual appears in IAM. Create the pool and provider with
+[Google's setup guide](https://docs.cloud.google.com/iam/docs/workload-identity-federation),
+then ship the credential configuration alongside the managed settings.
+
+`otel-headers-helper.sh` needs no change: a credential configuration activates
+through Application Default Credentials, and the helper's `gcloud` path then
+returns a short-lived federated token like any other.
+
+Attribution still comes from each developer's own `gcloud` sign-in, so a
+federated token belonging to a service account leaves `user.email` empty unless
+they have also signed in.
+
+The scripts here are unchanged by this path, but none of them set the pool up
+for you; follow Google's guide above.
+
+### Service account keys
+
+Avoid them. A key file does not expire, has to be copied to every laptop, and
+cannot be revoked for one person without rotating it for everyone. Many
+organisations block them outright.
+
 ## Roll out with managed settings
 
 Claude Code reads
@@ -114,14 +156,14 @@ sudo install -m 644 managed-settings.json /etc/claude-code/
 
 Each developer signs in to Google, and again when that session expires, with
 `gcloud auth login` or `gcloud auth application-default login`. Claude Code on
-Vertex AI already needs the second, and both helpers accept either. Until a
+Google Cloud already needs the second, and both helpers accept either. Until a
 developer signs in, Claude Code works normally but exports nothing, and shows a
 warning. On GCP compute the machine's service account sends the data without a
 sign-in, but the row names the developer only if they have signed in.
 On a GCE VM or Cloud Workstation that means running `gcloud auth login` on the
 machine itself; without it, rows go out with no `user_email`. Use
 `gcloud auth login` there rather than `gcloud auth application-default login`,
-which would also move Claude Code's Vertex AI calls from the machine's service
+which would also move Claude Code's model calls from the machine's service
 account to the developer.
 
 ### Try it without installing
@@ -223,7 +265,7 @@ Claude Code does not expand that string, so `$(hostname)` would stay literal:
 | `service.instance.id` | The hostname; required by the endpoint, and the `host` column in `sql/` | `policy-helper.sh` |
 | `user.email` | The developer's address, verified with Google | `policy-helper.sh` |
 
-On Vertex AI there is no Claude account in the session, so Claude Code cannot
+On Google Cloud there is no Claude account in the session, so Claude Code cannot
 fill in `user.email` itself. A
 [`policyHelper`](https://code.claude.com/docs/en/managed-settings#compute-the-policy-with-a-helper-program)
 closes the gap. Claude Code runs `policy-helper.sh` as the developer at every
@@ -234,7 +276,7 @@ Keep all of your managed settings in this one `managed-settings.json`. The helpe
 re-emits that file and nothing else, so keys in `managed-settings.d/` stop
 applying.
 
-Each start waits for the helper, about 1 to 3 seconds in testing and at most 5.
+Each start waits for the helper, usually 1 to 3 seconds and at most 5.
 If it can't verify a person's address in that time, Claude Code still starts and
 rows go out without `user.email`. The queries in `sql/` then show `user.id` instead,
 prefixed `id:`, but they need the `labels.user_email` column to exist, so at least
@@ -243,7 +285,7 @@ one signed-in developer has to send traffic first.
 ### Where this does not reach
 
 - **Server-managed settings** from the claude.ai admin console
-  [don't reach Vertex AI sessions](https://code.claude.com/docs/en/server-managed-settings#platform-availability).
+  [don't reach sessions that use Google Cloud models](https://code.claude.com/docs/en/server-managed-settings#platform-availability).
   Where they do apply, such as a developer signed in to a Team or Enterprise
   account, they take precedence, so the helper does not run and nothing reaches
   Google.
@@ -308,9 +350,8 @@ column or table appears it stays.
 The Log Router does not guarantee exactly-once delivery: the same log entry can
 be written to BigQuery more than once, producing duplicate rows that share an
 `insertId`. Nothing dedupes them for you, so an unguarded `SUM(cost_usd)` is
-inflated by whatever the duplicate rate happens to be. Measured on this project:
-7 duplicates in 178 `api_request` rows, overstating spend by 0.6%; the other
-four tables had none. The rate is small and not constant — do not assume it.
+inflated by whatever the duplicate rate happens to be. The rate is usually
+well under 1%, but it is not constant and not worth assuming.
 
 Every query here therefore keeps one row per `insertId`:
 
@@ -413,8 +454,8 @@ descriptors this export already produces.
 > minimum spacing between points on the same
 > time series and silently rejects anything closer; because these metrics are
 > DELTA, a rejected point is lost for good rather than healing on the next write.
-> Measured here over three days at a 10s export interval, the metric read 15.5%
-> under the logs ($15.5625 vs $18.4073), worst on the busiest day. That is why
+> At a 10s export interval the metric total has been measured around 15% under
+> the logs, and the gap widens the busier the day. That is why
 > `managed-settings.json` sets `OTEL_METRIC_EXPORT_INTERVAL` to 60000 — **do not
 > lower it below 15000.** Sparse series (`commit.count`, `pull_request.count`) are
 > unaffected either way; dense ones (`cost.usage`, `token.usage`) are where the
@@ -442,10 +483,8 @@ shell, so where an address is present it is reliable enough to bill against. It
 is still an accuracy control, not a security boundary: the helper runs as the
 developer, so a developer who sets out to change it can.
 
-The redaction above was confirmed on this deployment on 2026-09-24: max
-`LENGTH(labels.response)` was 10 (the literal `<REDACTED>`) while
-`response_length` reported 222. That is a check of the default, not a guarantee
-independent of the settings.
+Treat that as the behaviour of the defaults rather than a guarantee: the
+settings above decide it, so check them rather than the sample data.
 
 ## License
 
